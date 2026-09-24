@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>試合・チケットスケジュール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --court-1:#EDEDED; --court-2:#C7C7C7; --ink:#2f2f2f; --ink-soft:#949494;
+    --ticket-paper:#FAFAFA; --ticket-edge:#E4E4E4; --accent:#4a4a4a;
+    --pink-1:#fbe3ea; --pink-2:#f5c6d4;
+    --go-color:#f28b82; --want-color:#f4a6c6; --think-color:#a8d8ea; --skip-color:#b8b8b8; --none-color:#d6d6d6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:'Noto Sans JP', sans-serif; color:var(--ink);
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.6), transparent 55%),
+      linear-gradient(160deg, var(--court-1), var(--court-2));
+    padding:36px 16px 80px;
+  }
+  .wrap{ max-width:960px; margin:0 auto; }
+  header{ text-align:center; margin-bottom:24px; }
+  header .badge{
+    display:inline-block; background:var(--accent); color:#fff; font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:900; font-size:12px; letter-spacing:0.05em; padding:4px 14px; border-radius:999px; margin-bottom:12px;
+  }
+  header h1{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:clamp(26px,5vw,38px); color:var(--ink); margin:0 0 6px; }
+  header p{ color:#5a5a5a; font-size:13px; margin:0; }
+
+  .setup-banner{
+    max-width:440px; margin:0 auto 16px; background:#fff3cd; border:1px solid #f0d98c;
+    border-radius:10px; padding:12px 16px; font-size:12.5px; color:#6b5a1e; display:none;
+  }
+
+  .name-bar{
+    max-width:440px; margin:0 auto 20px; background:var(--ticket-paper); border-radius:10px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.18); padding:10px 14px; display:flex; align-items:center; gap:10px;
+  }
+  .name-bar label{ font-size:11.5px; font-weight:700; color:var(--ink-soft); white-space:nowrap; }
+  .name-bar input{
+    flex:1; min-width:0; font-family:'Noto Sans JP', sans-serif; font-size:13.5px; border:none;
+    border-bottom:2px solid var(--ticket-edge); background:transparent; padding:5px 2px; color:var(--ink);
+  }
+  .name-bar input:focus{ outline:none; border-bottom-color:var(--accent); }
+  .name-bar input.name-error{ border-bottom-color:#c8283b; }
+
+  .calendar-card{
+    background:var(--ticket-paper); max-width:440px; margin:0 auto 26px; border-radius:12px;
+    box-shadow:0 10px 20px rgba(0,0,0,0.3); padding:16px 14px 18px;
+  }
+  .calendar-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .calendar-header button{
+    background:rgba(0,0,0,0.06); border:none; width:30px; height:30px; border-radius:50%;
+    font-size:16px; color:var(--ink); cursor:pointer; line-height:1;
+  }
+  .calendar-header button:hover{ background:rgba(0,0,0,0.12); }
+  .calendar-month-label{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:15px; color:var(--ink); }
+  .calendar-weekdays{ display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--ink-soft); margin-bottom:4px; }
+  .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .calendar-cell{
+    position:relative; aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center;
+    justify-content:flex-start; padding-top:4px; border-radius:8px; font-size:11.5px; color:var(--ink);
+  }
+  .calendar-cell.dimmed{ color:#c9c9c9; }
+  .calendar-cell.today{ background:rgba(0,0,0,0.06); font-weight:700; }
+  .calendar-cell.has-game{ cursor:pointer; background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); }
+  .cal-dots{ display:flex; gap:2px; margin-top:3px; }
+  .cal-dot{ width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .cal-ticket-icon{ font-size:10px; line-height:1; margin-top:2px; }
+
+  .composer-title{ max-width:440px; margin:0 auto 14px; text-align:center; }
+  .composer-toggle-btn{
+    display:block; width:100%; background:var(--ticket-paper); border:1px solid var(--ticket-edge);
+    border-radius:999px; padding:10px 0; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.12);
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; color:var(--ink);
+  }
+  .composer-toggle-btn.open{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .tabs{ display:flex; max-width:440px; margin:0 auto 10px; gap:0; }
+  .tab-btn{
+    flex:1; background:rgba(0,0,0,0.18); color:var(--ink); border:none; font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700; font-size:14px; padding:12px 0; cursor:pointer; border-radius:10px;
+  }
+  .tab-btn + .tab-btn{ margin-left:6px; }
+  .tab-btn.active{ background:var(--ticket-paper); color:var(--ink); }
+  .tab-btn:disabled{ opacity:0.5; }
+
+  .edit-banner{
+    display:none; max-width:440px; margin:0 auto 10px; background:rgba(0,0,0,0.06); border:1px solid var(--ticket-edge);
+    border-radius:8px; padding:8px 14px; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--ink);
+  }
+  .edit-banner button{ background:none; border:1px solid var(--ink-soft); color:var(--ink); font-size:11.5px; padding:4px 10px; border-radius:999px; cursor:pointer; }
+
+  .composer{ background:var(--ticket-paper); max-width:440px; margin:0 auto 44px; border-radius:12px; box-shadow:0 14px 26px rgba(0,0,0,0.35); overflow:hidden; }
+  .composer-body{ padding:18px 20px 20px; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row > div{ flex:1; }
+  .composer label{ display:block; font-size:11.5px; color:var(--ink-soft); margin:12px 0 4px; font-weight:700; }
+  .composer input[type=text], .composer input[type=date], .composer input[type=time], .composer select{
+    width:100%; font-family:'Noto Sans JP', sans-serif; font-size:14.5px; border:none;
+    border-bottom:2px solid var(--ticket-edge); background:transparent; padding:7px 2px; color:var(--ink);
+    -webkit-appearance:none; appearance:none;
+  }
+  .composer select{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23949494' d='M5 7l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 2px center; background-size:16px; padding-right:22px;
+  }
+  .composer input:focus, .composer select:focus{ outline:none; border-bottom-color:var(--accent); }
+  .venue-fixed{ font-size:14.5px; color:var(--ink-soft); padding:7px 2px; border-bottom:2px solid var(--ticket-edge); }
+
+  .submit-btn{
+    display:block; width:100%; margin-top:18px; background:var(--accent); color:#fff; border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; padding:12px; border-radius:8px; cursor:pointer;
+  }
+  .submit-btn:hover{ filter:brightness(1.08); }
+  .submit-btn:disabled{ opacity:0.55; }
+  .form-msg{ text-align:center; font-size:12.5px; color:#c8283b; min-height:16px; margin-top:8px; }
+
+  .board{ column-width:270px; column-gap:22px; }
+  .card{ break-inside:avoid; margin:0 0 24px; background:var(--ticket-paper); border-radius:12px; overflow:hidden; box-shadow:0 10px 20px rgba(0,0,0,0.3); position:relative; padding:16px 18px 18px; }
+  .card-top{ background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); margin:-16px -18px 14px; padding:16px 18px 14px; }
+  .edit-btn, .remove-btn{
+    position:absolute; top:10px; background:rgba(0,0,0,0.12); border:none; font-size:13px; color:var(--ink);
+    cursor:pointer; line-height:1; padding:5px 7px; border-radius:6px;
+  }
+  .edit-btn{ right:52px; }
+  .remove-btn{ right:10px; }
+  .edit-btn:hover, .remove-btn:hover{ background:rgba(0,0,0,0.22); }
+  .type-badge{ display:inline-block; font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:10.5px; letter-spacing:0.03em; padding:2px 9px; border-radius:999px; margin-bottom:6px; background:rgba(255,255,255,0.7); color:var(--ink); }
+  .opponent{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:18px; margin:0 0 2px; padding-right:60px; }
+  .date-line{ font-size:12.5px; color:#4a4a4a; }
+  .venue-line{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; border-top:1px solid var(--ticket-edge); padding-top:10px; margin-top:12px; }
+  .grid .item .k{ font-size:10.5px; color:var(--ink-soft); margin-bottom:2px; }
+  .grid .item .v{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px; }
+
+  .vote-row{ display:flex; gap:6px; margin-top:14px; }
+  .vote-btn{
+    flex:1; text-align:center; border:1.5px solid var(--ticket-edge); border-radius:10px; padding:7px 2px;
+    background:transparent; cursor:pointer; font-family:'Noto Sans JP', sans-serif;
+  }
+  .vote-label{ display:block; font-size:11px; color:var(--ink-soft); }
+  .vote-count{ font-size:11px; color:var(--ink-soft); cursor:pointer; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px; }
+  .vote-btn.active.plan-go{ background:var(--go-color); border-color:var(--go-color); }
+  .vote-btn.active.plan-go .vote-label, .vote-btn.active.plan-go .vote-count{ color:var(--ink); font-weight:700; }
+  .vote-btn.active.plan-want{ background:var(--want-color); border-color:var(--want-color); }
+  .vote-btn.active.plan-want .vote-label, .vote-btn.active.plan-want .vote-count{ color:var(--ink); font-weight:700; }
+  .vote-btn.active.plan-think{ background:var(--think-color); border-color:var(--think-color); }
+  .vote-btn.active.plan-think .vote-label, .vote-btn.active.plan-think .vote-count{ color:var(--ink); font-weight:700; }
+  .vote-btn.active.plan-no{ background:var(--skip-color); border-color:var(--skip-color); }
+  .vote-btn.active.plan-no .vote-label, .vote-btn.active.plan-no .vote-count{ color:#fff; font-weight:700; }
+
+  .names-panel{ margin-top:8px; background:rgba(0,0,0,0.03); border-radius:8px; padding:8px 10px; font-size:12px; color:var(--ink); }
+  .names-panel .names-title{ font-weight:700; color:var(--ink-soft); font-size:10.5px; margin-bottom:4px; }
+
+  .empty-state{ text-align:center; color:#5a5a5a; padding:60px 20px; font-size:14px; }
+  .empty-state .big{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; display:block; margin-bottom:8px; }
+  .loading{ text-align:center; color:#5a5a5a; padding:40px; font-size:14px; }
+  footer{ text-align:center; margin-top:44px; font-size:11.5px; color:#5a5a5a; line-height:1.7; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">SCHEDULE</span>
+      <h1>試合・チケットスケジュール</h1>
+      <p>リンクを知っている人なら誰でも記録を追加できます</p>
+    </header>
+
+    <div class="setup-banner" id="setupBanner">Google Apps ScriptのURLが設定されていません。ファイル内の <code>API_URL</code> を書き換えてください。</div>
+
+    <div class="name-bar">
+      <label for="viewerNameInput">あなたの名前</label>
+      <input type="text" id="viewerNameInput" maxlength="20" placeholder="例)たなか">
+    </div>
+
+    <div class="calendar-card">
+      <div class="calendar-header">
+        <button type="button" id="prevMonthBtn" aria-label="前の月">‹</button>
+        <div class="calendar-month-label" id="monthLabel"></div>
+        <button type="button" id="nextMonthBtn" aria-label="次の月">›</button>
+      </div>
+      <div class="calendar-weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <button type="button" class="composer-toggle-btn composer-title" id="scheduleToggleBtn">🔒 Add Schedule</button>
+
+    <div id="scheduleFormWrap" style="display:none;">
+      <div class="tabs">
+        <button type="button" class="tab-btn active" id="homeTabBtn">HOME</button>
+        <button type="button" class="tab-btn" id="awayTabBtn">AWAY</button>
+      </div>
+
+      <div class="edit-banner" id="editBanner">
+        <span>✏️ 編集中</span>
+        <button type="button" id="cancelEditBtn">キャンセル</button>
+      </div>
+
+      <div class="composer">
+        <div class="composer-body">
+          <label for="dateInput">試合日</label>
+          <input type="date" id="dateInput">
+
+          <label for="timeInput">開始時刻(任意)</label>
+          <input type="time" id="timeInput">
+
+          <div id="homeFields">
+            <label for="opponentInput">対戦相手</label>
+            <select id="opponentInput"></select>
+            <label>会場</label>
+            <div class="venue-fixed">TOYOTA ARENA TOKYO</div>
+          </div>
+
+          <div id="awayFields" style="display:none;">
+            <label for="opponentInputAway">対戦相手</label>
+            <select id="opponentInputAway"></select>
+            <label for="venueInput">会場</label>
+            <input type="text" id="venueInput" maxlength="30" placeholder="例)おきなわアリーナ">
+          </div>
+
+          <div class="field-row">
+            <div>
+              <label for="preSaleInput">先行発売日(任意)</label>
+              <input type="date" id="preSaleInput">
+            </div>
+            <div>
+              <label for="generalSaleInput">一般発売日(任意)</label>
+              <input type="date" id="generalSaleInput">
+            </div>
+          </div>
+
+          <label for="noteInput">メモ(任意)</label>
+          <input type="text" id="noteInput" maxlength="30" placeholder="例)第21節 GAME2">
+
+          <button class="submit-btn" id="addBtn">スケジュールを追加</button>
+          <div class="form-msg" id="formMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="boardArea"><div class="loading">読み込み中...</div></div>
+
+    <footer>全員に公開されているスケジュールです。<br>個人情報の入力にはご注意ください。</footer>
+  </div>
+
+<script>
+(function(){
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxn9AgM-3P14VCtKDIZTIBDnxL2lmA7Q1On6X2XuEBL1WSuUwyJcoa0FOnKkAdoo4T-eg/exec';
+  const SHEET_NAME = 'schedule';
+  const MY_IDS_KEY = 'scheduleapp_my_ids';
+  const MY_REACTIONS_KEY = 'scheduleapp_my_reactions';
+  const MY_NAME_KEY = 'scheduleapp_my_name';
+
+  const TEAMS = [
+    'レバンガ北海道','仙台89ERS','秋田ノーザンハピネッツ','茨城ロボッツ','宇都宮ブレックス',
+    '群馬クレインサンダーズ','アルティーリ千葉','千葉ジェッツ','東京サンロッカーズ','川崎ブレイブサンダース',
+    '横浜ビー・コルセアーズ','富山グラウジーズ','信州ブレイブウォリアーズ','三遠ネオフェニックス','シーホース三河',
+    '名古屋ダイヤモンドドルフィンズ','滋賀レイクス','京都ハンナリーズ','大阪エヴェッサ','神戸ストークス',
+    '島根スサノオマジック','広島ドラゴンフライズ','佐賀バルーナーズ','長崎ヴェルカ','琉球ゴールデンキングス','越谷アルファーズ'
+  ];
+
+  function fillSelect(sel, items){
+    sel.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value=''; opt0.textContent='選択してください';
+    sel.appendChild(opt0);
+    items.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  }
+  const opponentInput = document.getElementById('opponentInput');
+  const opponentInputAway = document.getElementById('opponentInputAway');
+  fillSelect(opponentInput, TEAMS);
+  fillSelect(opponentInputAway, TEAMS);
+
+  // ---- API client ----
+  async function apiList(){
+    const res = await fetch(API_URL + '?sheet=' + SHEET_NAME + '&action=list');
+    const data = await res.json();
+    return data.items || [];
+  }
+  async function apiAdd(record){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'add', data:record }) });
+    return res.json();
+  }
+  async function apiUpdate(id, record){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'update', id, data:record }) });
+    return res.json();
+  }
+  async function apiDelete(id){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id }) });
+    return res.json();
+  }
+
+  function lsGet(key, fallback){ try{ return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }catch(e){ return fallback; } }
+  function lsSet(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+  let myIds = lsGet(MY_IDS_KEY, []);
+  let myReactions = lsGet(MY_REACTIONS_KEY, {});
+  let myName = localStorage.getItem(MY_NAME_KEY) || '';
+
+  const scheduleToggleBtn = document.getElementById('scheduleToggleBtn');
+  const scheduleFormWrap = document.getElementById('scheduleFormWrap');
+  scheduleToggleBtn.addEventListener('click', () => {
+    const isOpen = scheduleFormWrap.style.display !== 'none';
+    scheduleFormWrap.style.display = isOpen ? 'none' : 'block';
+    scheduleToggleBtn.textContent = isOpen ? '🔒 Add Schedule' : '🔓 Add Schedule ▲';
+    scheduleToggleBtn.classList.toggle('open', !isOpen);
+    if(!isOpen) scheduleFormWrap.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  const viewerNameInput = document.getElementById('viewerNameInput');
+  viewerNameInput.value = myName;
+  viewerNameInput.addEventListener('input', () => viewerNameInput.classList.remove('name-error'));
+  viewerNameInput.addEventListener('change', () => {
+    myName = viewerNameInput.value.trim();
+    localStorage.setItem(MY_NAME_KEY, myName);
+  });
+
+  const homeTabBtn = document.getElementById('homeTabBtn');
+  const awayTabBtn = document.getElementById('awayTabBtn');
+  const homeFields = document.getElementById('homeFields');
+  const awayFields = document.getElementById('awayFields');
+  let currentMode = 'HOME';
+  function setMode(mode){
+    currentMode = mode; formMsg.textContent = '';
+    homeTabBtn.classList.toggle('active', mode==='HOME');
+    awayTabBtn.classList.toggle('active', mode==='AWAY');
+    homeFields.style.display = mode==='HOME' ? 'block':'none';
+    awayFields.style.display = mode==='AWAY' ? 'block':'none';
+  }
+  homeTabBtn.addEventListener('click', () => setMode('HOME'));
+  awayTabBtn.addEventListener('click', () => setMode('AWAY'));
+
+  const dateInput = document.getElementById('dateInput');
+  const timeInput = document.getElementById('timeInput');
+  const venueInput = document.getElementById('venueInput');
+  const preSaleInput = document.getElementById('preSaleInput');
+  const generalSaleInput = document.getElementById('generalSaleInput');
+  const noteInput = document.getElementById('noteInput');
+  const addBtn = document.getElementById('addBtn');
+  const formMsg = document.getElementById('formMsg');
+  const boardArea = document.getElementById('boardArea');
+  const editBanner = document.getElementById('editBanner');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const prevMonthBtn = document.getElementById('prevMonthBtn');
+  const nextMonthBtn = document.getElementById('nextMonthBtn');
+  const monthLabel = document.getElementById('monthLabel');
+  const calendarGrid = document.getElementById('calendarGrid');
+
+  const now0 = new Date();
+  let calendarViewDate = new Date(now0.getFullYear(), now0.getMonth(), 1);
+  let currentList = [];
+  let editingId = null;
+  let openPanelByGame = {};
+
+  const PLAN_OPTIONS = [
+    { key:'go', label:'行く' }, { key:'want', label:'行きたい' },
+    { key:'think', label:'検討中' }, { key:'no', label:'行かない' }
+  ];
+  function planLabel(plan){
+    if(plan==='go') return '行く'; if(plan==='want') return '行きたい';
+    if(plan==='think') return '検討中'; return '行かない';
+  }
+  function planClass(plan){
+    if(plan==='go') return 'status-go-cls plan-go'; // placeholder unused
+    return '';
+  }
+  function planKeyClass(plan){
+    if(plan==='go') return 'plan-go'; if(plan==='want') return 'plan-want';
+    if(plan==='think') return 'plan-think'; return 'plan-no';
+  }
+  function dotClass(plan){
+    if(plan==='go') return 'go'; if(plan==='want') return 'want'; if(plan==='think') return 'think'; return 'no';
+  }
+
+  function escapeHtml(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+  function formatDate(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr+'T00:00:00'); if(isNaN(d)) return dateStr;
+    return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  }
+  function formatShortDate(dateStr){
+    if(!dateStr) return '-';
+    const d = new Date(dateStr+'T00:00:00'); if(isNaN(d)) return dateStr;
+    return (d.getMonth()+1)+'/'+d.getDate();
+  }
+
+  function renderList(list){
+    if(list.length === 0){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">まだスケジュールがありません</span>気になる試合を追加してみましょう</div>';
+      return;
+    }
+    const sorted = list.slice().sort((a,b) => {
+      const da=a.date||''; const db=b.date||'';
+      if(da!==db) return da.localeCompare(db);
+      return (a.timestamp||0)-(b.timestamp||0);
+    });
+
+    const html = sorted.map(s => {
+      const isMine = myIds.indexOf(s.id) !== -1;
+      const titleText = 'vs ' + (s.opponent || '(未設定)');
+      const reactions = Array.isArray(s.reactions) ? s.reactions : [];
+      const myRespId = myReactions[s.id];
+
+      const votesHtml = PLAN_OPTIONS.map(p => {
+        const count = reactions.filter(r => r.plan === p.key).length;
+        const mine = myRespId && reactions.find(r => r.respId===myRespId && r.plan===p.key);
+        return '<button type="button" class="vote-btn ' + (mine?'active '+planKeyClass(p.key):'') + '" data-game-id="' + s.id + '" data-plan="' + p.key + '">'
+          + '<span class="vote-label">' + p.label + '</span>'
+          + '<span class="vote-count">♥' + count + '</span>'
+          + '</button>';
+      }).join('');
+
+      let panelHtml = '';
+      const openPlan = openPanelByGame[s.id];
+      if(openPlan){
+        const names = reactions.filter(r => r.plan === openPlan).map(r => escapeHtml(r.name||'名無し'));
+        const planDef = PLAN_OPTIONS.find(p => p.key === openPlan);
+        panelHtml = '<div class="names-panel"><div class="names-title">' + (planDef?planDef.label:'') + '(' + names.length + '人)</div>'
+          + (names.length ? names.join('、') : 'まだいません') + '</div>';
+      }
+
+      return '<div class="card" id="card-' + s.id + '">'
+        + '<div class="card-top">'
+        + (isMine ? '<button class="edit-btn" data-id="' + s.id + '" title="編集">編集</button>' : '')
+        + (isMine ? '<button class="remove-btn" data-id="' + s.id + '" title="削除">削除</button>' : '')
+        + '<div class="opponent">' + escapeHtml(titleText) + '</div>'
+        + '<div class="date-line">' + escapeHtml(formatDate(s.date)) + (s.time ? ' ' + escapeHtml(s.time) + '〜' : '') + (s.note ? '　' + escapeHtml(s.note) : '') + '</div>'
+        + (s.venue ? '<div class="venue-line">' + escapeHtml(s.venue) + '</div>' : '')
+        + '</div>'
+        + '<div class="grid">'
+        + '<div class="item"><div class="k">先行発売</div><div class="v">' + formatShortDate(s.preSale) + '</div></div>'
+        + '<div class="item"><div class="k">一般発売</div><div class="v">' + formatShortDate(s.generalSale) + '</div></div>'
+        + '</div>'
+        + '<div class="vote-row">' + votesHtml + '</div>'
+        + panelHtml
+        + '</div>';
+    }).join('');
+
+    boardArea.innerHTML = '<div class="board">' + html + '</div>';
+
+    boardArea.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.getAttribute('data-id'))));
+    boardArea.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => { const entry = list.find(x=>x.id===btn.getAttribute('data-id')); if(entry) startEdit(entry); });
+    });
+    boardArea.querySelectorAll('.vote-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleVoteClick(btn.getAttribute('data-game-id'), btn.getAttribute('data-plan')));
+    });
+    boardArea.querySelectorAll('.vote-count').forEach(span => {
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const btn = span.closest('.vote-btn');
+        handleViewNames(btn.getAttribute('data-game-id'), btn.getAttribute('data-plan'));
+      });
+    });
+  }
+
+  function buildCalendar(list){
+    const year = calendarViewDate.getFullYear();
+    const month = calendarViewDate.getMonth();
+    monthLabel.textContent = year + '年' + (month+1) + '月';
+
+    const firstDay = new Date(year, month, 1);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const gamesByDate = {}; const salesByDate = {};
+    list.forEach(s => {
+      if(s.date){ if(!gamesByDate[s.date]) gamesByDate[s.date]=[]; gamesByDate[s.date].push(s); }
+      if(s.preSale){ if(!salesByDate[s.preSale]) salesByDate[s.preSale]=[]; salesByDate[s.preSale].push(s); }
+      if(s.generalSale){ if(!salesByDate[s.generalSale]) salesByDate[s.generalSale]=[]; salesByDate[s.generalSale].push(s); }
+    });
+
+    const now = new Date();
+    const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+    const totalCells = Math.ceil((startWeekday+daysInMonth)/7)*7;
+    let cellsHtml = '';
+
+    for(let i=0;i<totalCells;i++){
+      const dayNum = i - startWeekday + 1;
+      let displayDay, dimmed=false;
+      if(dayNum<1){ displayDay = daysInPrevMonth+dayNum; dimmed=true; }
+      else if(dayNum>daysInMonth){ displayDay = dayNum-daysInMonth; dimmed=true; }
+      else{ displayDay = dayNum; }
+
+      let dateStr = '';
+      if(!dimmed) dateStr = year+'-'+String(month+1).padStart(2,'0')+'-'+String(displayDay).padStart(2,'0');
+
+      const games = dateStr ? (gamesByDate[dateStr]||[]) : [];
+      const sales = dateStr ? (salesByDate[dateStr]||[]) : [];
+      const hasGame = games.length>0; const hasSale = sales.length>0;
+      const isToday = dateStr === todayStr;
+
+      let dotsHtml = '';
+      if(hasGame){
+        dotsHtml = '<div class="cal-dots">' + games.slice(0,3).map(g => {
+          const respId = myReactions[g.id];
+          const mine = respId ? (g.reactions||[]).find(r=>r.respId===respId) : null;
+          return '<span class="cal-dot" style="background:' + (mine ? 'var(--'+dotClass(mine.plan)+'-color)' : 'var(--none-color)') + '"></span>';
+        }).join('') + '</div>';
+      }
+      let ticketHtml = hasSale ? '<div class="cal-ticket-icon">🎫</div>' : '';
+
+      cellsHtml += '<div class="calendar-cell' + (dimmed?' dimmed':'') + (isToday?' today':'') + ((hasGame||hasSale)?' has-game':'') + '"'
+        + ((hasGame||hasSale) ? ' data-date="'+dateStr+'" tabindex="0" role="button"' : '') + '>'
+        + '<span class="cal-daynum">' + displayDay + '</span>' + dotsHtml + ticketHtml + '</div>';
+    }
+
+    calendarGrid.innerHTML = cellsHtml;
+    calendarGrid.querySelectorAll('.calendar-cell.has-game').forEach(cell => {
+      const jump = () => {
+        const dateStr = cell.getAttribute('data-date');
+        const target = (gamesByDate[dateStr]||[])[0] || (salesByDate[dateStr]||[])[0];
+        if(!target) return;
+        const el = document.getElementById('card-'+target.id);
+        if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); }
+      };
+      cell.addEventListener('click', jump);
+      cell.addEventListener('keydown', (e) => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); jump(); } });
+    });
+  }
+
+  prevMonthBtn.addEventListener('click', () => { calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth()-1, 1); buildCalendar(currentList); });
+  nextMonthBtn.addEventListener('click', () => { calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth()+1, 1); buildCalendar(currentList); });
+
+  async function refresh(){
+    try{
+      const list = await apiList();
+      currentList = list;
+      renderList(list);
+      buildCalendar(list);
+    }catch(e){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">読み込みに失敗しました</span>API_URLの設定を確認してください</div>';
+    }
+  }
+
+  function resetForm(){
+    dateInput.value=''; timeInput.value=''; opponentInput.value=''; opponentInputAway.value='';
+    venueInput.value=''; preSaleInput.value=''; generalSaleInput.value=''; noteInput.value='';
+  }
+
+  function startEdit(entry){
+    editingId = entry.id; formMsg.textContent = '';
+    scheduleFormWrap.style.display = 'block';
+    scheduleToggleBtn.textContent = '🔓 Add Schedule ▲';
+    scheduleToggleBtn.classList.add('open');
+    setMode(entry.type === 'AWAY' ? 'AWAY' : 'HOME');
+    homeTabBtn.disabled = true; awayTabBtn.disabled = true;
+
+    dateInput.value = entry.date || '';
+    timeInput.value = entry.time || '';
+    preSaleInput.value = entry.preSale || '';
+    generalSaleInput.value = entry.generalSale || '';
+    noteInput.value = entry.note || '';
+    if(entry.type === 'AWAY'){ opponentInputAway.value = entry.opponent||''; venueInput.value = entry.venue||''; }
+    else{ opponentInput.value = entry.opponent||''; }
+
+    editBanner.style.display = 'flex';
+    addBtn.textContent = '更新する';
+    document.querySelector('.composer').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  function endEdit(){
+    editingId = null; homeTabBtn.disabled=false; awayTabBtn.disabled=false;
+    editBanner.style.display='none'; resetForm();
+  }
+  cancelEditBtn.addEventListener('click', endEdit);
+
+  async function handleAdd(){
+    formMsg.textContent = '';
+    if(!dateInput.value){ formMsg.textContent = '試合日を入力してください'; dateInput.focus(); return; }
+    const opponentValue = currentMode === 'HOME' ? opponentInput.value : opponentInputAway.value;
+    if(!opponentValue){ formMsg.textContent = '対戦相手を選択してください'; return; }
+
+    const wasEditing = !!editingId;
+    addBtn.disabled = true;
+    addBtn.textContent = wasEditing ? '更新しています...' : '追加しています...';
+
+    try{
+      const original = wasEditing ? currentList.find(x => x.id === editingId) : null;
+      const record = {
+        type: currentMode, date: dateInput.value, time: timeInput.value, opponent: opponentValue,
+        preSale: preSaleInput.value, generalSale: generalSaleInput.value, note: noteInput.value.trim(),
+        timestamp: original ? original.timestamp : Date.now(),
+        reactions: original ? (original.reactions || []) : []
+      };
+      record.venue = currentMode === 'HOME' ? 'TOYOTA ARENA TOKYO' : venueInput.value.trim();
+
+      if(wasEditing){
+        await apiUpdate(editingId, record);
+        endEdit();
+      }else{
+        const res = await apiAdd(record);
+        if(res && res.id){ myIds.push(res.id); lsSet(MY_IDS_KEY, myIds); }
+        resetForm();
+      }
+      await refresh();
+    }catch(e){
+      formMsg.textContent = '保存に失敗しました。API_URLの設定をご確認ください。';
+    }finally{
+      addBtn.disabled = false;
+      addBtn.textContent = editingId ? '更新する' : 'スケジュールを追加';
+    }
+  }
+
+  async function handleDelete(id){
+    try{
+      await apiDelete(id);
+      myIds = myIds.filter(i => i !== id); lsSet(MY_IDS_KEY, myIds);
+      await refresh();
+    }catch(e){ formMsg.textContent = '削除に失敗しました。もう一度お試しください。'; }
+  }
+
+  async function handleVoteClick(gameId, planKey){
+    const name = viewerNameInput.value.trim();
+    if(!name){
+      viewerNameInput.classList.add('name-error');
+      viewerNameInput.focus();
+      viewerNameInput.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    myName = name; localStorage.setItem(MY_NAME_KEY, name);
+
+    try{
+      const list = await apiList();
+      const game = list.find(x => x.id === gameId);
+      if(!game) return;
+      if(!Array.isArray(game.reactions)) game.reactions = [];
+
+      const existingRespId = myReactions[gameId];
+      const existing = existingRespId ? game.reactions.find(r => r.respId === existingRespId) : null;
+
+      if(existing && existing.plan === planKey){
+        game.reactions = game.reactions.filter(r => r.respId !== existingRespId);
+        delete myReactions[gameId];
+        lsSet(MY_REACTIONS_KEY, myReactions);
+      }else if(existing){
+        existing.plan = planKey; existing.name = name; existing.timestamp = Date.now();
+      }else{
+        const respId = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+        game.reactions.push({ respId, name, plan: planKey, timestamp: Date.now() });
+        myReactions[gameId] = respId;
+        lsSet(MY_REACTIONS_KEY, myReactions);
+      }
+
+      await apiUpdate(gameId, game);
+      await refresh();
+    }catch(e){
+      formMsg.textContent = '保存に失敗しました。もう一度お試しください。';
+    }
+  }
+
+  function handleViewNames(gameId, planKey){
+    if(openPanelByGame[gameId] === planKey) delete openPanelByGame[gameId];
+    else openPanelByGame[gameId] = planKey;
+    renderList(currentList);
+  }
+
+  addBtn.addEventListener('click', handleAdd);
+
+  function init(){
+    setMode('HOME');
+    if(!API_URL || API_URL.indexOf('PASTE_') !== -1){
+      document.getElementById('setupBanner').style.display = 'block';
+    }
+    refresh();
+    setInterval(refresh, 8000);
+  }
+  init();
+})();
+</script>
+</body>
+</html>

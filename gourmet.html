@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アリーナグルメまとめ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --court-1:#EDEDED; --court-2:#C7C7C7; --ink:#2f2f2f; --ink-soft:#949494;
+    --ticket-paper:#FAFAFA; --ticket-edge:#E4E4E4; --accent:#4a4a4a;
+    --pink-1:#fbe3ea; --pink-2:#f5c6d4; --star-color:#f5b74e;
+    --truck-color:#a8d8ea; --store-color:#f4a6c6; --limited-color:#f28b82; --permanent-color:#b8d8b0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:'Noto Sans JP', sans-serif; color:var(--ink);
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.6), transparent 55%),
+      linear-gradient(160deg, var(--court-1), var(--court-2));
+    padding:36px 16px 80px;
+  }
+  .wrap{ max-width:960px; margin:0 auto; }
+  header{ text-align:center; margin-bottom:30px; }
+  header .badge{
+    display:inline-block; background:var(--accent); color:#fff; font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:900; font-size:12px; letter-spacing:0.05em; padding:4px 14px; border-radius:999px; margin-bottom:12px;
+  }
+  header h1{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:clamp(26px,5vw,38px); color:var(--ink); margin:0 0 6px; }
+  header p{ color:#5a5a5a; font-size:13px; margin:0; }
+
+  .setup-banner{
+    max-width:440px; margin:0 auto 16px; background:#fff3cd; border:1px solid #f0d98c;
+    border-radius:10px; padding:12px 16px; font-size:12.5px; color:#6b5a1e; display:none;
+  }
+
+  .composer-title{ max-width:440px; margin:0 auto 14px; text-align:center; }
+  .composer-toggle-btn{
+    display:block; width:100%; background:var(--ticket-paper); border:1px solid var(--ticket-edge);
+    border-radius:999px; padding:10px 0; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.12);
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; color:var(--ink);
+  }
+  .composer-toggle-btn.open{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .composer{ background:var(--ticket-paper); max-width:440px; margin:14px auto 44px; border-radius:12px; box-shadow:0 14px 26px rgba(0,0,0,0.35); overflow:hidden; }
+  .composer-body{ padding:18px 20px 20px; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row > div{ flex:1; }
+  .composer label{ display:block; font-size:11.5px; color:var(--ink-soft); margin:12px 0 4px; font-weight:700; }
+  .composer input[type=text], .composer textarea, .composer select{
+    width:100%; font-family:'Noto Sans JP', sans-serif; font-size:14.5px; border:none;
+    border-bottom:2px solid var(--ticket-edge); background:transparent; padding:7px 2px; color:var(--ink);
+    -webkit-appearance:none; appearance:none;
+  }
+  .composer textarea{ min-height:70px; resize:vertical; line-height:1.6; }
+  .composer input:focus, .composer textarea:focus{ outline:none; border-bottom-color:var(--accent); }
+
+  .toggle-group{ display:flex; gap:8px; margin-top:6px; }
+  .toggle-option{
+    flex:1; text-align:center; padding:8px 4px; border:1.5px solid var(--ticket-edge); border-radius:8px;
+    font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; background:transparent;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+  }
+  .toggle-option.active.opt-store{ background:var(--store-color); border-color:var(--store-color); color:var(--ink); }
+  .toggle-option.active.opt-truck{ background:var(--truck-color); border-color:var(--truck-color); color:var(--ink); }
+  .toggle-option.active.opt-permanent{ background:var(--permanent-color); border-color:var(--permanent-color); color:var(--ink); }
+  .toggle-option.active.opt-limited{ background:var(--limited-color); border-color:var(--limited-color); color:var(--ink); }
+
+  .star-picker{ display:flex; gap:4px; margin-top:6px; }
+  .star-picker .star-btn{ background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color:var(--ticket-edge); padding:2px; }
+  .star-picker .star-btn.filled{ color:var(--star-color); }
+
+  .photo-url-preview{ margin-top:10px; max-width:100%; max-height:160px; border-radius:8px; display:none; }
+
+  .submit-btn{
+    display:block; width:100%; margin-top:18px; background:var(--accent); color:#fff; border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; padding:12px; border-radius:8px; cursor:pointer;
+  }
+  .submit-btn:hover{ filter:brightness(1.08); }
+  .submit-btn:disabled{ opacity:0.55; }
+  .form-msg{ text-align:center; font-size:12.5px; color:#c8283b; min-height:16px; margin-top:8px; }
+
+  .filter-banner{
+    max-width:440px; margin:0 auto 16px; background:var(--accent); color:#fff; border-radius:10px;
+    padding:10px 16px; display:flex; align-items:center; justify-content:space-between; font-size:12.5px; box-shadow:0 6px 14px rgba(0,0,0,0.2);
+  }
+  .filter-banner button{ background:rgba(255,255,255,0.2); border:none; color:#fff; font-size:11.5px; padding:5px 12px; border-radius:999px; cursor:pointer; }
+
+  .board{ column-width:270px; column-gap:22px; }
+  .card{ break-inside:avoid; margin:0 0 24px; background:var(--ticket-paper); border-radius:12px; overflow:hidden; box-shadow:0 10px 20px rgba(0,0,0,0.3); position:relative; }
+  .edit-btn, .remove-btn{
+    position:absolute; top:10px; background:rgba(0,0,0,0.35); border:none; font-size:13px; color:#fff;
+    cursor:pointer; line-height:1; padding:5px 7px; border-radius:6px; z-index:2;
+  }
+  .edit-btn{ right:52px; }
+  .remove-btn{ right:10px; }
+  .edit-btn:hover, .remove-btn:hover{ background:rgba(0,0,0,0.55); }
+
+  .ig-header{ display:flex; align-items:center; gap:10px; padding:12px 14px; }
+  .ig-avatar{
+    width:34px; height:34px; border-radius:50%; background:linear-gradient(160deg,var(--pink-1),var(--pink-2));
+    display:flex; align-items:center; justify-content:center; font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:900; font-size:14px; color:var(--ink); flex-shrink:0; cursor:pointer;
+  }
+  .ig-header-text{ min-width:0; flex:1; }
+  .ig-username{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13px; color:var(--ink); cursor:pointer; }
+  .ig-location{ font-size:11px; color:var(--ink-soft); cursor:pointer; }
+
+  .ig-photo{ width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); }
+  .ig-photo-placeholder{
+    width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); color:#fff; font-weight:700; letter-spacing:0.05em; font-size:12.5px;
+  }
+
+  .ig-caption{ padding:14px 14px 16px; }
+  .ig-food-name{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:16px; margin:0 0 4px; }
+  .ig-stars{ color:var(--star-color); font-size:15px; letter-spacing:1px; margin-bottom:8px; }
+  .ig-stars .empty-star{ color:var(--ticket-edge); }
+  .ig-review{ font-size:13.5px; line-height:1.7; color:var(--ink); white-space:pre-wrap; word-break:break-word; margin-bottom:10px; }
+  .ig-hashtags{ font-size:13px; font-weight:700; color:#3897c9; line-height:1.6; }
+
+  .empty-state{ text-align:center; color:#5a5a5a; padding:60px 20px; font-size:14px; }
+  .empty-state .big{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; display:block; margin-bottom:8px; }
+  .loading{ text-align:center; color:#5a5a5a; padding:40px; font-size:14px; }
+  footer{ text-align:center; margin-top:44px; font-size:11.5px; color:#5a5a5a; line-height:1.7; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">GOURMET</span>
+      <h1>アリーナグルメまとめ</h1>
+      <p>リンクを知っている人なら誰でも投稿できます</p>
+    </header>
+
+    <div class="setup-banner" id="setupBanner">Google Apps ScriptのURLが設定されていません。ファイル内の <code>API_URL</code> を書き換えてください。</div>
+
+    <button type="button" class="composer-toggle-btn composer-title" id="foodToggleBtn">Add Food</button>
+
+    <div id="foodFormWrap" style="display:none;">
+      <div class="composer">
+        <div class="composer-body">
+          <label for="nameFieldInput">グルメ名</label>
+          <input type="text" id="nameFieldInput" maxlength="40" placeholder="例)アルバルクバーガー">
+
+          <label for="venueInput">会場</label>
+          <input type="text" id="venueInput" maxlength="30" placeholder="例)TOYOTA ARENA TOKYO">
+
+          <label>店舗 or キッチンカー</label>
+          <div class="toggle-group" id="shopTypeGroup">
+            <button type="button" class="toggle-option opt-store active" data-value="store">店舗</button>
+            <button type="button" class="toggle-option opt-truck" data-value="truck">キッチンカー</button>
+          </div>
+
+          <label>常設 or 期間限定</label>
+          <div class="toggle-group" id="availabilityGroup">
+            <button type="button" class="toggle-option opt-permanent active" data-value="permanent">常設</button>
+            <button type="button" class="toggle-option opt-limited" data-value="limited">期間限定</button>
+          </div>
+
+          <label>おすすめ度</label>
+          <div class="star-picker" id="starPicker">
+            <button type="button" class="star-btn" data-value="1">★</button>
+            <button type="button" class="star-btn" data-value="2">★</button>
+            <button type="button" class="star-btn" data-value="3">★</button>
+            <button type="button" class="star-btn" data-value="4">★</button>
+            <button type="button" class="star-btn" data-value="5">★</button>
+          </div>
+
+          <label for="photoUrlInput">写真URL(任意)</label>
+          <input type="text" id="photoUrlInput" placeholder="https://...">
+          <img class="photo-url-preview" id="photoUrlPreview" alt="">
+
+          <label for="reviewInput">口コミ</label>
+          <textarea id="reviewInput" maxlength="300" placeholder="味や量、並んだ時間など自由にどうぞ"></textarea>
+
+          <label for="authorInput">お名前(任意)</label>
+          <input type="text" id="authorInput" maxlength="20" placeholder="例)たなか">
+
+          <button class="submit-btn" id="addBtn">投稿する</button>
+          <div class="form-msg" id="formMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="boardArea"><div class="loading">読み込み中...</div></div>
+
+    <footer>全員に公開されているグルメまとめです。<br>お店の迷惑にならない範囲での口コミにご協力ください。</footer>
+  </div>
+
+<script>
+(function(){
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxn9AgM-3P14VCtKDIZTIBDnxL2lmA7Q1On6X2XuEBL1WSuUwyJcoa0FOnKkAdoo4T-eg/exec';
+  const SHEET_NAME = 'gourmet';
+  const MY_IDS_KEY = 'gourmetapp_my_ids';
+  const MY_AUTHOR_KEY = 'gourmetapp_my_author';
+
+  async function apiList(){
+    const res = await fetch(API_URL + '?sheet=' + SHEET_NAME + '&action=list');
+    const data = await res.json();
+    return data.items || [];
+  }
+  async function apiAdd(record){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'add', data:record }) });
+    return res.json();
+  }
+  async function apiUpdate(id, record){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'update', id, data:record }) });
+    return res.json();
+  }
+  async function apiDelete(id){
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id }) });
+    return res.json();
+  }
+  function lsGet(key, fallback){ try{ return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }catch(e){ return fallback; } }
+  function lsSet(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+  let myIds = lsGet(MY_IDS_KEY, []);
+  let currentList = [];
+  let editingId = null;
+  let filterType = null, filterValue = null;
+
+  const foodToggleBtn = document.getElementById('foodToggleBtn');
+  const foodFormWrap = document.getElementById('foodFormWrap');
+  foodToggleBtn.addEventListener('click', () => {
+    const isOpen = foodFormWrap.style.display !== 'none';
+    foodFormWrap.style.display = isOpen ? 'none' : 'block';
+    foodToggleBtn.textContent = isOpen ? 'Add Food' : 'Add Food ▲';
+    foodToggleBtn.classList.toggle('open', !isOpen);
+    if(!isOpen) foodFormWrap.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  const nameFieldInput = document.getElementById('nameFieldInput');
+  const venueInput = document.getElementById('venueInput');
+  const shopTypeGroup = document.getElementById('shopTypeGroup');
+  const availabilityGroup = document.getElementById('availabilityGroup');
+  const starPicker = document.getElementById('starPicker');
+  const photoUrlInput = document.getElementById('photoUrlInput');
+  const photoUrlPreview = document.getElementById('photoUrlPreview');
+  const reviewInput = document.getElementById('reviewInput');
+  const authorInput = document.getElementById('authorInput');
+  const addBtn = document.getElementById('addBtn');
+  const formMsg = document.getElementById('formMsg');
+  const boardArea = document.getElementById('boardArea');
+
+  let shopType = 'store', availability = 'permanent', rating = 0;
+
+  function setToggle(group, value){
+    group.querySelectorAll('.toggle-option').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-value')===value));
+  }
+  shopTypeGroup.querySelectorAll('.toggle-option').forEach(btn => btn.addEventListener('click', () => { shopType = btn.getAttribute('data-value'); setToggle(shopTypeGroup, shopType); }));
+  availabilityGroup.querySelectorAll('.toggle-option').forEach(btn => btn.addEventListener('click', () => { availability = btn.getAttribute('data-value'); setToggle(availabilityGroup, availability); }));
+
+  function renderStarPicker(){
+    starPicker.querySelectorAll('.star-btn').forEach(btn => { const v = Number(btn.getAttribute('data-value')); btn.classList.toggle('filled', v <= rating); });
+  }
+  starPicker.querySelectorAll('.star-btn').forEach(btn => btn.addEventListener('click', () => { const v = Number(btn.getAttribute('data-value')); rating = (rating===v)?0:v; renderStarPicker(); }));
+
+  photoUrlInput.addEventListener('input', () => {
+    const url = photoUrlInput.value.trim();
+    if(url){ photoUrlPreview.src = url; photoUrlPreview.style.display = 'block'; }
+    else{ photoUrlPreview.style.display = 'none'; }
+  });
+
+  function escapeHtml(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+  function starDisplay(n){
+    let html=''; for(let i=1;i<=5;i++){ html += i<=n ? '★' : '<span class="empty-star">★</span>'; } return html;
+  }
+
+  function wireFilterBanner(){
+    const btn = document.getElementById('clearFilterBtn');
+    if(btn) btn.addEventListener('click', () => { filterType=null; filterValue=null; renderList(currentList); });
+  }
+
+  function renderList(list){
+    const source = filterType
+      ? list.filter(g => filterType==='author' ? (g.author||'名無し')===filterValue : (g.venue||'')===filterValue)
+      : list;
+
+    const bannerHtml = filterType
+      ? '<div class="filter-banner"><span>' + escapeHtml(filterValue) + (filterType==='author'?'さんの投稿':'の投稿') + '(' + source.length + '件)</span><button type="button" id="clearFilterBtn">全員の投稿に戻る</button></div>'
+      : '';
+
+    if(source.length === 0){
+      const emptyMsg = filterType ? 'まだ投稿がありません' : 'まだグルメ情報がありません';
+      boardArea.innerHTML = bannerHtml + '<div class="empty-state"><span class="big">' + emptyMsg + '</span>' + (filterType?'':'気になる一品を投稿してみましょう') + '</div>';
+      wireFilterBanner();
+      return;
+    }
+
+    const sorted = source.slice().sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
+    const html = sorted.map(g => {
+      const isMine = myIds.indexOf(g.id) !== -1;
+      const photoHtml = g.photoUrl
+        ? '<img class="ig-photo" src="' + escapeHtml(g.photoUrl) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;ig-photo-placeholder&quot;>NO IMAGE</div>\'">'
+        : '<div class="ig-photo-placeholder">NO IMAGE</div>';
+      const authorName = g.author || '名無し';
+      const avatarChar = authorName.charAt(0);
+      const shopTag = g.shopType === 'truck' ? '#キッチンカー' : '#店舗';
+      const availTag = g.availability === 'limited' ? '#期間限定' : '#常設';
+
+      return '<div class="card" id="card-' + g.id + '">'
+        + (isMine ? '<button class="edit-btn" data-id="' + g.id + '" title="編集">編集</button>' : '')
+        + (isMine ? '<button class="remove-btn" data-id="' + g.id + '" title="削除">削除</button>' : '')
+        + '<div class="ig-header">'
+        + '<div class="ig-avatar" data-filter-type="author" data-filter-value="' + escapeHtml(authorName) + '">' + escapeHtml(avatarChar) + '</div>'
+        + '<div class="ig-header-text">'
+        + '<div class="ig-username" data-filter-type="author" data-filter-value="' + escapeHtml(authorName) + '">' + escapeHtml(authorName) + '</div>'
+        + (g.venue ? '<div class="ig-location" data-filter-type="venue" data-filter-value="' + escapeHtml(g.venue) + '">' + escapeHtml(g.venue) + '</div>' : '')
+        + '</div></div>'
+        + photoHtml
+        + '<div class="ig-caption">'
+        + '<div class="ig-food-name">' + escapeHtml(g.name || '(名称未設定)') + '</div>'
+        + '<div class="ig-stars">' + starDisplay(g.rating || 0) + '</div>'
+        + (g.review ? '<div class="ig-review">' + escapeHtml(g.review) + '</div>' : '')
+        + '<div class="ig-hashtags">' + shopTag + ' ' + availTag + '</div>'
+        + '</div></div>';
+    }).join('');
+
+    boardArea.innerHTML = bannerHtml + '<div class="board">' + html + '</div>';
+
+    boardArea.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.getAttribute('data-id'))));
+    boardArea.querySelectorAll('.edit-btn').forEach(btn => { btn.addEventListener('click', () => { const entry = list.find(x=>x.id===btn.getAttribute('data-id')); if(entry) startEdit(entry); }); });
+    boardArea.querySelectorAll('[data-filter-type]').forEach(el => {
+      el.addEventListener('click', () => {
+        filterType = el.getAttribute('data-filter-type');
+        filterValue = el.getAttribute('data-filter-value');
+        renderList(currentList);
+        boardArea.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+    wireFilterBanner();
+  }
+
+  let touchStartX=null, touchStartY=null;
+  document.addEventListener('touchstart', (e) => {
+    if(!filterType) return;
+    touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener('touchend', (e) => {
+    if(!filterType || touchStartX===null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX=null; touchStartY=null;
+    if(dx > 80 && Math.abs(dy) < 60){ filterType=null; filterValue=null; renderList(currentList); }
+  }, {passive:true});
+
+  async function refresh(){
+    try{
+      const list = await apiList();
+      currentList = list;
+      renderList(list);
+    }catch(e){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">読み込みに失敗しました</span>API_URLの設定を確認してください</div>';
+    }
+  }
+
+  function resetForm(){
+    nameFieldInput.value=''; venueInput.value=''; shopType='store'; availability='permanent'; rating=0;
+    setToggle(shopTypeGroup, shopType); setToggle(availabilityGroup, availability); renderStarPicker();
+    reviewInput.value=''; photoUrlInput.value=''; photoUrlPreview.style.display='none';
+  }
+
+  function startEdit(entry){
+    editingId = entry.id; formMsg.textContent = '';
+    foodFormWrap.style.display = 'block';
+    foodToggleBtn.textContent = 'Add Food ▲';
+    foodToggleBtn.classList.add('open');
+
+    nameFieldInput.value = entry.name || '';
+    venueInput.value = entry.venue || '';
+    shopType = entry.shopType || 'store';
+    availability = entry.availability || 'permanent';
+    rating = entry.rating || 0;
+    setToggle(shopTypeGroup, shopType); setToggle(availabilityGroup, availability); renderStarPicker();
+    reviewInput.value = entry.review || '';
+    authorInput.value = entry.author || '';
+    photoUrlInput.value = entry.photoUrl || '';
+    if(entry.photoUrl){ photoUrlPreview.src = entry.photoUrl; photoUrlPreview.style.display='block'; }
+    else{ photoUrlPreview.style.display='none'; }
+
+    addBtn.textContent = '更新する';
+    document.querySelector('.composer').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  async function handleAdd(){
+    formMsg.textContent = '';
+    const name = nameFieldInput.value.trim();
+    if(!name){ formMsg.textContent = 'グルメ名を入力してください'; nameFieldInput.focus(); return; }
+
+    const wasEditing = !!editingId;
+    addBtn.disabled = true;
+    addBtn.textContent = wasEditing ? '更新しています...' : '投稿しています...';
+
+    try{
+      const author = authorInput.value.trim();
+      if(author) lsSet(MY_AUTHOR_KEY, author);
+      const original = wasEditing ? currentList.find(x => x.id === editingId) : null;
+
+      const record = {
+        name, venue: venueInput.value.trim(), shopType, availability, rating,
+        review: reviewInput.value.trim(), author, photoUrl: photoUrlInput.value.trim(),
+        timestamp: original ? original.timestamp : Date.now()
+      };
+
+      if(wasEditing){
+        await apiUpdate(editingId, record);
+      }else{
+        const res = await apiAdd(record);
+        if(res && res.id){ myIds.push(res.id); lsSet(MY_IDS_KEY, myIds); }
+      }
+      editingId = null;
+      resetForm();
+      await refresh();
+    }catch(e){
+      formMsg.textContent = '保存に失敗しました。API_URLの設定をご確認ください。';
+    }finally{
+      addBtn.disabled = false;
+      addBtn.textContent = editingId ? '更新する' : '投稿する';
+    }
+  }
+
+  async function handleDelete(id){
+    try{
+      await apiDelete(id);
+      myIds = myIds.filter(i => i !== id); lsSet(MY_IDS_KEY, myIds);
+      await refresh();
+    }catch(e){ formMsg.textContent = '削除に失敗しました。もう一度お試しください。'; }
+  }
+
+  addBtn.addEventListener('click', handleAdd);
+
+  function init(){
+    const savedAuthor = localStorage.getItem(MY_AUTHOR_KEY);
+    if(savedAuthor) authorInput.value = savedAuthor;
+    renderStarPicker();
+    if(!API_URL || API_URL.indexOf('PASTE_') !== -1){
+      document.getElementById('setupBanner').style.display = 'block';
+    }
+    refresh();
+    setInterval(refresh, 8000);
+  }
+  init();
+})();
+</script>
+</body>
+</html>

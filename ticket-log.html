@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>観戦チケットログ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --court-1:#EDEDED;
+    --court-2:#C7C7C7;
+    --ink:#2f2f2f;
+    --ink-soft:#949494;
+    --ticket-paper:#FAFAFA;
+    --ticket-edge:#E4E4E4;
+    --accent:#4a4a4a;
+    --pink-1:#fbe3ea;
+    --pink-2:#f5c6d4;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:'Noto Sans JP', sans-serif;
+    color:var(--ink);
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 90px),
+      radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.18), transparent 55%),
+      linear-gradient(160deg, var(--court-1), var(--court-2));
+    padding:36px 16px 80px;
+  }
+  .wrap{ max-width:960px; margin:0 auto; }
+  header{ text-align:center; margin-bottom:30px; }
+  header .badge{
+    display:inline-block; background:var(--accent); color:#fff;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:12px;
+    letter-spacing:0.05em; padding:4px 14px; border-radius:999px; margin-bottom:12px;
+  }
+  header h1{
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900;
+    font-size:clamp(26px, 5vw, 38px); color:var(--ink); margin:0 0 6px;
+  }
+  header p{ color:#5a5a5a; font-size:13px; margin:0; }
+
+  .setup-banner{
+    max-width:440px; margin:0 auto 20px; background:#fff3cd; border:1px solid #f0d98c;
+    border-radius:10px; padding:12px 16px; font-size:12.5px; color:#6b5a1e; display:none;
+  }
+
+  .composer-title{
+    max-width:440px; margin:0 auto 14px; text-align:center;
+  }
+  .composer-toggle-btn{
+    display:block; width:100%; background:var(--ticket-paper); border:1px solid var(--ticket-edge);
+    border-radius:999px; padding:10px 0; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.12);
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; color:var(--ink);
+  }
+  .composer-toggle-btn:hover{ background:#fff; }
+  .composer-toggle-btn.open{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .tabs{ display:flex; max-width:440px; margin:14px auto 10px; gap:0; }
+  .tab-btn{
+    flex:1; background:rgba(0,0,0,0.18); color:var(--ink); border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:14px;
+    padding:12px 0; cursor:pointer; border-radius:10px;
+  }
+  .tab-btn + .tab-btn{ margin-left:6px; }
+  .tab-btn.active{ background:var(--ticket-paper); color:var(--ink); }
+  .tab-btn:disabled{ opacity:0.5; }
+
+  .edit-banner{
+    display:none; max-width:440px; margin:0 auto 10px; background:rgba(0,0,0,0.06);
+    border:1px solid var(--ticket-edge); border-radius:8px; padding:8px 14px;
+    align-items:center; justify-content:space-between; font-size:12.5px; color:var(--ink);
+  }
+  .edit-banner button{
+    background:none; border:1px solid var(--ink-soft); color:var(--ink); font-size:11.5px;
+    padding:4px 10px; border-radius:999px; cursor:pointer;
+  }
+
+  .composer{
+    background:var(--ticket-paper); max-width:440px; margin:0 auto 44px; border-radius:12px;
+    box-shadow:0 14px 26px rgba(0,0,0,0.35); overflow:hidden;
+  }
+  .composer-body{ padding:18px 20px 20px; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row > div{ flex:1; }
+  .composer label{ display:block; font-size:11.5px; color:var(--ink-soft); margin:12px 0 4px; font-weight:700; }
+  .composer input[type=text], .composer input[type=number], .composer input[type=date], .composer select{
+    width:100%; font-family:'Noto Sans JP', sans-serif; font-size:14.5px; border:none;
+    border-bottom:2px solid var(--ticket-edge); background:transparent; padding:7px 2px; color:var(--ink);
+    -webkit-appearance:none; appearance:none;
+  }
+  .composer select{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23949494' d='M5 7l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 2px center; background-size:16px; padding-right:22px;
+  }
+  .composer input:focus, .composer select:focus{ outline:none; border-bottom-color:var(--accent); }
+  .venue-fixed{ font-size:14.5px; color:var(--ink-soft); padding:7px 2px; border-bottom:2px solid var(--ticket-edge); }
+
+  .photo-url-preview{ margin-top:10px; max-width:100%; max-height:160px; border-radius:8px; display:none; }
+
+  .submit-btn{
+    display:block; width:100%; margin-top:18px; background:var(--accent); color:#fff; border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; padding:12px;
+    border-radius:8px; cursor:pointer;
+  }
+  .submit-btn:hover{ filter:brightness(1.08); }
+  .submit-btn:disabled{ opacity:0.55; }
+  .form-msg{ text-align:center; font-size:12.5px; color:#c8283b; min-height:16px; margin-top:8px; }
+
+  .board{ column-width:270px; column-gap:22px; }
+  .ticket{
+    break-inside:avoid; margin:0 0 24px; background:var(--ticket-paper); border-radius:12px;
+    overflow:hidden; box-shadow:0 10px 20px rgba(0,0,0,0.3); position:relative;
+  }
+  .ticket .photo{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:#e5d7c0; }
+  .ticket .photo-placeholder{
+    width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); color:#fff; font-weight:700;
+    letter-spacing:0.05em; font-size:12.5px;
+  }
+  .perforation{ position:relative; height:0; border-top:2px dashed var(--ticket-edge); margin:0 14px; }
+  .perforation::before, .perforation::after{
+    content:''; position:absolute; top:-9px; width:18px; height:18px; border-radius:50%; background:var(--court-2);
+  }
+  .perforation::before{ left:-23px; }
+  .perforation::after{ right:-23px; }
+  .stub{ padding:16px 18px 18px; position:relative; }
+  .edit-btn, .remove-btn{
+    position:absolute; top:10px; background:rgba(32,24,21,0.08); border:none; font-size:13px;
+    color:var(--ink-soft); cursor:pointer; line-height:1; padding:5px 7px; border-radius:6px;
+  }
+  .edit-btn{ right:52px; }
+  .remove-btn{ right:10px; }
+  .edit-btn:hover, .remove-btn:hover{ background:rgba(32,24,21,0.18); color:var(--ink); }
+  .stub .opponent{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:18px; margin:0 0 2px; padding-right:60px; }
+  .stub .date{ font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .stub .venue{
+    font-size:11.5px; color:var(--ink-soft); margin-bottom:12px; display:inline-block;
+    background:rgba(0,0,0,0.06); padding:2px 8px; border-radius:999px;
+  }
+  .stub .grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; border-top:1px solid var(--ticket-edge); padding-top:10px; }
+  .stub .grid .item .k{ font-size:10.5px; color:var(--ink-soft); margin-bottom:2px; }
+  .stub .grid .item .v{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:14.5px; }
+
+  .type-badge{
+    display:inline-block; font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:10.5px;
+    letter-spacing:0.03em; padding:2px 9px; border-radius:999px; margin-bottom:6px;
+  }
+  .type-badge.home{ background:rgba(74,74,74,0.12); color:var(--accent); }
+  .type-badge.away{ background:rgba(74,74,74,0.12); color:#2e3a4a; }
+
+  .empty-state{ text-align:center; color:#5a5a5a; padding:60px 20px; font-size:14px; }
+  .empty-state .big{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; display:block; margin-bottom:8px; }
+  .loading{ text-align:center; color:#5a5a5a; padding:40px; font-size:14px; }
+  footer{ text-align:center; margin-top:44px; font-size:11.5px; color:#5a5a5a; line-height:1.7; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">SEAT LOG</span>
+      <h1>観戦チケットログ</h1>
+      <p>リンクを知っている人なら誰でも記録を追加できます</p>
+    </header>
+
+    <div class="setup-banner" id="setupBanner">
+      Google Apps ScriptのURLが設定されていません。ファイル内の <code>API_URL</code> を書き換えてください。
+    </div>
+
+    <button type="button" class="composer-toggle-btn composer-title" id="ticketToggleBtn">Add Ticket</button>
+
+    <div id="ticketFormWrap" style="display:none;">
+      <div class="tabs">
+        <button type="button" class="tab-btn active" id="homeTabBtn">HOME</button>
+        <button type="button" class="tab-btn" id="awayTabBtn">AWAY</button>
+      </div>
+
+      <div class="edit-banner" id="editBanner">
+        <span>✏️ 編集中</span>
+        <button type="button" id="cancelEditBtn">キャンセル</button>
+      </div>
+
+      <div class="composer">
+        <div class="composer-body">
+          <label for="dateInput">試合日</label>
+          <input type="date" id="dateInput">
+
+          <div class="mode-fields" id="homeFields">
+            <label for="opponentInput">対戦相手</label>
+            <select id="opponentInput"></select>
+
+            <label>会場</label>
+            <div class="venue-fixed">TOYOTA ARENA TOKYO</div>
+
+            <label for="areaSelectInput">エリア</label>
+            <select id="areaSelectInput"></select>
+
+            <label for="sectionSelectInput">セクション</label>
+            <select id="sectionSelectInput"></select>
+          </div>
+
+          <div class="mode-fields" id="awayFields" style="display:none;">
+            <div class="field-row">
+              <div>
+                <label for="team1Input">チーム1</label>
+                <select id="team1Input"></select>
+              </div>
+              <div>
+                <label for="team2Input">チーム2</label>
+                <select id="team2Input"></select>
+              </div>
+            </div>
+
+            <label for="noteInputAway">試合メモ(任意)</label>
+            <input type="text" id="noteInputAway" maxlength="30" placeholder="例)第21節 GAME2">
+
+            <label for="venueInput">会場</label>
+            <input type="text" id="venueInput" maxlength="30" placeholder="例)おきなわアリーナ">
+
+            <label for="areaTextInput">エリア</label>
+            <input type="text" id="areaTextInput" maxlength="20" placeholder="例)アウェイ自由席A">
+
+            <label for="sectionTextInput">セクション</label>
+            <input type="text" id="sectionTextInput" maxlength="20" placeholder="例)Aブロック12番">
+          </div>
+
+          <label for="noteInput" id="noteHomeLabel">試合メモ(任意)</label>
+          <input type="text" id="noteInput" maxlength="30" placeholder="例)第21節 GAME2">
+
+          <div class="field-row">
+            <div>
+              <label for="rowInput">列</label>
+              <input type="text" id="rowInput" maxlength="10" placeholder="例)7列">
+            </div>
+            <div>
+              <label for="seatInput">番号</label>
+              <input type="text" id="seatInput" maxlength="10" placeholder="例)22番">
+            </div>
+          </div>
+
+          <label for="priceInput">価格(円)</label>
+          <input type="number" id="priceInput" min="0" placeholder="例)10620">
+
+          <label for="photoUrlInput">座席からの写真URL(任意)</label>
+          <input type="text" id="photoUrlInput" placeholder="https://...">
+          <img class="photo-url-preview" id="photoUrlPreview" alt="">
+
+          <button class="submit-btn" id="addBtn">チケットを追加</button>
+          <div class="form-msg" id="formMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="boardArea"><div class="loading">読み込み中...</div></div>
+
+    <footer>全員に公開されている観戦ログです。<br>個人情報が写り込む写真の投稿にはご注意ください。</footer>
+  </div>
+
+<script>
+(function(){
+  // ==== ここにGoogle Apps ScriptのウェブアプリURLを貼り付け ====
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxn9AgM-3P14VCtKDIZTIBDnxL2lmA7Q1On6X2XuEBL1WSuUwyJcoa0FOnKkAdoo4T-eg/exec';
+  const SHEET_NAME = 'tickets';
+  const MY_IDS_KEY = 'ticketlog_my_ids';
+
+  const TEAMS = [
+    'レバンガ北海道','仙台89ERS','秋田ノーザンハピネッツ','茨城ロボッツ','宇都宮ブレックス',
+    '群馬クレインサンダーズ','アルティーリ千葉','千葉ジェッツ','東京サンロッカーズ','川崎ブレイブサンダース',
+    '横浜ビー・コルセアーズ','富山グラウジーズ','信州ブレイブウォリアーズ','三遠ネオフェニックス','シーホース三河',
+    '名古屋ダイヤモンドドルフィンズ','滋賀レイクス','京都ハンナリーズ','大阪エヴェッサ','神戸ストークス',
+    '島根スサノオマジック','広島ドラゴンフライズ','佐賀バルーナーズ','長崎ヴェルカ','琉球ゴールデンキングス','越谷アルファーズ'
+  ];
+  const TEAMS_WITH_ALVARK = TEAMS.slice(0,8).concat(['アルバルク東京']).concat(TEAMS.slice(8));
+
+  const AREAS = [
+    '01:プラチナシート1列','02:プラチナシート2列','03:ベンチサイド1列','04:ベンチサイド2列',
+    '05:コートサイド1列','06:コートサイド2列','07:コートサイド3列','08:コートサイド4列',
+    '09:コートエンド1列','10:コートエンド2列','11:コートエンド3列/ペアシート','12:メインA','13:サイドA',
+    '14:コーナーエンドA','15:エンドA','16:エンド見切れA','17:メインベンチB','18:メインベンチ反対B',
+    '19:メインサイドB','20:サイドB','21:コーナーエンドB','22:エンドB','23:エンド見切れB','24:メインベンチC',
+    '25:メインベンチ反対C','26:サイドC','27:コーナーエンドC','28:エンドC','29:エンド見切れC','30:メインD',
+    '31:サイドD','32:コーナーD','33:エンドD','34:THERMOSシート','35:メインE','36:コーナーE','37:エンドE',
+    '38:メインF','39:コーナーF','40:エンドF','41:カウンターシート','42:エンド車いす席','43:ロージュBOX',
+    '44:Squareインシート','45:日本ハウズイングFAMILY ROOM','46:コーナー車いす席'
+  ];
+
+  function fillSelect(sel, items, placeholder){
+    sel.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = ''; opt0.textContent = placeholder || '選択してください';
+    sel.appendChild(opt0);
+    items.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    });
+  }
+
+  const opponentInput = document.getElementById('opponentInput');
+  const team1Input = document.getElementById('team1Input');
+  const team2Input = document.getElementById('team2Input');
+  const areaSelectInput = document.getElementById('areaSelectInput');
+  const sectionSelectInput = document.getElementById('sectionSelectInput');
+
+  fillSelect(opponentInput, TEAMS);
+  fillSelect(team1Input, TEAMS_WITH_ALVARK);
+  fillSelect(team2Input, TEAMS_WITH_ALVARK);
+  fillSelect(areaSelectInput, AREAS);
+
+  (function populateSections(){
+    const groupLower = document.createElement('optgroup');
+    groupLower.label = '1階(ロアスタンド) A01〜A24';
+    for(let i=1;i<=24;i++){
+      const code = 'A' + String(i).padStart(2,'0');
+      const o = document.createElement('option'); o.value = code; o.textContent = code;
+      groupLower.appendChild(o);
+    }
+    const groupUpper = document.createElement('optgroup');
+    groupUpper.label = '2階(アッパースタンド) B01〜B34';
+    for(let i=1;i<=34;i++){
+      const code = 'B' + String(i).padStart(2,'0');
+      const o = document.createElement('option'); o.value = code; o.textContent = code;
+      groupUpper.appendChild(o);
+    }
+    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='選択してください';
+    sectionSelectInput.appendChild(opt0);
+    sectionSelectInput.appendChild(groupLower);
+    sectionSelectInput.appendChild(groupUpper);
+  })();
+
+  // ---- API client (Google Apps Script) ----
+  async function apiList(){
+    const res = await fetch(API_URL + '?sheet=' + SHEET_NAME + '&action=list');
+    const data = await res.json();
+    return data.items || [];
+  }
+  async function apiAdd(record){
+    const res = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ sheet:SHEET_NAME, action:'add', data:record })
+    });
+    return res.json();
+  }
+  async function apiUpdate(id, record){
+    const res = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ sheet:SHEET_NAME, action:'update', id, data:record })
+    });
+    return res.json();
+  }
+  async function apiDelete(id){
+    const res = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id })
+    });
+    return res.json();
+  }
+
+  // ---- personal (this-device-only) ownership, no login needed ----
+  function loadMyIds(){
+    try{ return JSON.parse(localStorage.getItem(MY_IDS_KEY) || '[]'); }catch(e){ return []; }
+  }
+  function saveMyIds(ids){
+    try{ localStorage.setItem(MY_IDS_KEY, JSON.stringify(ids)); }catch(e){}
+  }
+  let myIds = loadMyIds();
+
+  const ticketToggleBtn = document.getElementById('ticketToggleBtn');
+  const ticketFormWrap = document.getElementById('ticketFormWrap');
+  ticketToggleBtn.addEventListener('click', () => {
+    const isOpen = ticketFormWrap.style.display !== 'none';
+    ticketFormWrap.style.display = isOpen ? 'none' : 'block';
+    ticketToggleBtn.textContent = isOpen ? 'Add Ticket' : 'Add Ticket ▲';
+    ticketToggleBtn.classList.toggle('open', !isOpen);
+    if(!isOpen) ticketFormWrap.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  const homeTabBtn = document.getElementById('homeTabBtn');
+  const awayTabBtn = document.getElementById('awayTabBtn');
+  const homeFields = document.getElementById('homeFields');
+  const awayFields = document.getElementById('awayFields');
+  const noteInput = document.getElementById('noteInput');
+  const noteHomeLabel = document.getElementById('noteHomeLabel');
+
+  let currentMode = 'HOME';
+  function setMode(mode){
+    currentMode = mode;
+    formMsg.textContent = '';
+    homeTabBtn.classList.toggle('active', mode === 'HOME');
+    awayTabBtn.classList.toggle('active', mode === 'AWAY');
+    homeFields.style.display = mode === 'HOME' ? 'block' : 'none';
+    awayFields.style.display = mode === 'AWAY' ? 'block' : 'none';
+    noteHomeLabel.style.display = mode === 'HOME' ? 'block' : 'none';
+    noteInput.style.display = mode === 'HOME' ? 'block' : 'none';
+  }
+  homeTabBtn.addEventListener('click', () => setMode('HOME'));
+  awayTabBtn.addEventListener('click', () => setMode('AWAY'));
+
+  const dateInput = document.getElementById('dateInput');
+  const noteInputAway = document.getElementById('noteInputAway');
+  const venueInput = document.getElementById('venueInput');
+  const areaTextInput = document.getElementById('areaTextInput');
+  const sectionTextInput = document.getElementById('sectionTextInput');
+  const rowInput = document.getElementById('rowInput');
+  const seatInput = document.getElementById('seatInput');
+  const priceInput = document.getElementById('priceInput');
+  const photoUrlInput = document.getElementById('photoUrlInput');
+  const photoUrlPreview = document.getElementById('photoUrlPreview');
+  const addBtn = document.getElementById('addBtn');
+  const formMsg = document.getElementById('formMsg');
+  const boardArea = document.getElementById('boardArea');
+  const editBanner = document.getElementById('editBanner');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+  let editingId = null;
+  let currentList = [];
+
+  photoUrlInput.addEventListener('input', () => {
+    const url = photoUrlInput.value.trim();
+    if(url){
+      photoUrlPreview.src = url;
+      photoUrlPreview.style.display = 'block';
+    }else{
+      photoUrlPreview.style.display = 'none';
+    }
+  });
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+  function formatDate(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if(isNaN(d)) return dateStr;
+    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日';
+  }
+  function formatPrice(n){
+    if(n === null || n === undefined || n === '') return '-';
+    return '¥' + Number(n).toLocaleString('ja-JP');
+  }
+
+  function renderList(list){
+    if(list.length === 0){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">まだチケットがありません</span>最初の記録を追加してみましょう</div>';
+      return;
+    }
+    const sorted = list.slice().sort((a,b) => {
+      const da = a.date || ''; const db = b.date || '';
+      if(da !== db) return db.localeCompare(da);
+      return (b.timestamp||0) - (a.timestamp||0);
+    });
+
+    const html = sorted.map(t => {
+      const isMine = myIds.indexOf(t.id) !== -1;
+      const isHome = t.type !== 'AWAY';
+      const titleText = isHome ? 'vs ' + (t.opponent || '(未設定)') : (t.team1 || '(未設定)') + ' vs ' + (t.team2 || '(未設定)');
+      const photoHtml = t.photoUrl
+        ? '<img class="photo" src="' + escapeHtml(t.photoUrl) + '" alt="座席からの眺め" onerror="this.outerHTML=\'<div class=&quot;photo-placeholder&quot;>NO IMAGE</div>\'">'
+        : '<div class="photo-placeholder">NO IMAGE</div>';
+
+      return '<div class="ticket">'
+        + photoHtml
+        + '<div class="perforation"></div>'
+        + '<div class="stub">'
+        + (isMine ? '<button class="edit-btn" data-id="' + t.id + '" title="編集">編集</button>' : '')
+        + (isMine ? '<button class="remove-btn" data-id="' + t.id + '" title="削除">削除</button>' : '')
+        + '<div class="type-badge ' + (isHome?'home':'away') + '">' + (isHome?'HOME':'AWAY') + '</div>'
+        + '<div class="opponent">' + escapeHtml(titleText) + '</div>'
+        + '<div class="date">' + escapeHtml(formatDate(t.date)) + (t.note ? '　' + escapeHtml(t.note) : '') + '</div>'
+        + (t.venue ? '<div class="venue">' + escapeHtml(t.venue) + '</div>' : '')
+        + '<div class="grid">'
+        + '<div class="item"><div class="k">エリア</div><div class="v">' + escapeHtml(t.area || '-') + '</div></div>'
+        + '<div class="item"><div class="k">セクション</div><div class="v">' + escapeHtml(t.section || '-') + '</div></div>'
+        + '<div class="item"><div class="k">価格</div><div class="v">' + formatPrice(t.price) + '</div></div>'
+        + '<div class="item"><div class="k">列</div><div class="v">' + escapeHtml(t.row || '-') + '</div></div>'
+        + '<div class="item"><div class="k">番号</div><div class="v">' + escapeHtml(t.seat || '-') + '</div></div>'
+        + '</div></div></div>';
+    }).join('');
+
+    boardArea.innerHTML = '<div class="board">' + html + '</div>';
+    boardArea.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleDelete(btn.getAttribute('data-id')));
+    });
+    boardArea.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = list.find(x => x.id === btn.getAttribute('data-id'));
+        if(entry) startEdit(entry);
+      });
+    });
+  }
+
+  async function refresh(){
+    try{
+      const list = await apiList();
+      currentList = list;
+      renderList(list);
+    }catch(e){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">読み込みに失敗しました</span>API_URLの設定を確認してください</div>';
+    }
+  }
+
+  function resetForm(){
+    dateInput.value = '';
+    opponentInput.value = '';
+    noteInput.value = '';
+    areaSelectInput.value = '';
+    sectionSelectInput.value = '';
+    team1Input.value = '';
+    team2Input.value = '';
+    noteInputAway.value = '';
+    venueInput.value = '';
+    areaTextInput.value = '';
+    sectionTextInput.value = '';
+    rowInput.value = '';
+    seatInput.value = '';
+    priceInput.value = '';
+    photoUrlInput.value = '';
+    photoUrlPreview.style.display = 'none';
+  }
+
+  function startEdit(entry){
+    editingId = entry.id;
+    formMsg.textContent = '';
+    setMode(entry.type === 'AWAY' ? 'AWAY' : 'HOME');
+    homeTabBtn.disabled = true; awayTabBtn.disabled = true;
+
+    dateInput.value = entry.date || '';
+    rowInput.value = entry.row || '';
+    seatInput.value = entry.seat || '';
+    priceInput.value = (entry.price !== null && entry.price !== undefined) ? entry.price : '';
+    photoUrlInput.value = entry.photoUrl || '';
+    if(entry.photoUrl){ photoUrlPreview.src = entry.photoUrl; photoUrlPreview.style.display = 'block'; }
+    else{ photoUrlPreview.style.display = 'none'; }
+
+    if(entry.type === 'AWAY'){
+      team1Input.value = entry.team1 || '';
+      team2Input.value = entry.team2 || '';
+      noteInputAway.value = entry.note || '';
+      venueInput.value = entry.venue || '';
+      areaTextInput.value = entry.area || '';
+      sectionTextInput.value = entry.section || '';
+    }else{
+      opponentInput.value = entry.opponent || '';
+      noteInput.value = entry.note || '';
+      areaSelectInput.value = entry.area || '';
+      sectionSelectInput.value = entry.section || '';
+    }
+
+    editBanner.style.display = 'flex';
+    addBtn.textContent = '更新する';
+    ticketFormWrap.style.display = 'block';
+    ticketToggleBtn.textContent = 'Add Ticket ▲';
+    ticketToggleBtn.classList.add('open');
+    document.querySelector('.composer').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function endEdit(){
+    editingId = null;
+    homeTabBtn.disabled = false; awayTabBtn.disabled = false;
+    editBanner.style.display = 'none';
+    addBtn.textContent = 'チケットを追加';
+    resetForm();
+  }
+  cancelEditBtn.addEventListener('click', endEdit);
+
+  async function handleAdd(){
+    formMsg.textContent = '';
+    if(!dateInput.value){ formMsg.textContent = '試合日を入力してください'; dateInput.focus(); return; }
+    if(currentMode === 'HOME'){
+      if(!opponentInput.value){ formMsg.textContent = '対戦相手を選択してください'; opponentInput.focus(); return; }
+    }else{
+      if(!team1Input.value || !team2Input.value){ formMsg.textContent = 'チーム1・チーム2を選択してください'; return; }
+    }
+
+    const wasEditing = !!editingId;
+    addBtn.disabled = true;
+    addBtn.textContent = wasEditing ? '更新しています...' : '追加しています...';
+
+    try{
+      const record = {
+        type: currentMode,
+        date: dateInput.value,
+        row: rowInput.value.trim(),
+        seat: seatInput.value.trim(),
+        price: priceInput.value ? Number(priceInput.value) : null,
+        photoUrl: photoUrlInput.value.trim(),
+        timestamp: Date.now()
+      };
+      if(currentMode === 'HOME'){
+        record.opponent = opponentInput.value;
+        record.note = noteInput.value.trim();
+        record.venue = 'TOYOTA ARENA TOKYO';
+        record.area = areaSelectInput.value;
+        record.section = sectionSelectInput.value;
+      }else{
+        record.team1 = team1Input.value;
+        record.team2 = team2Input.value;
+        record.note = noteInputAway.value.trim();
+        record.venue = venueInput.value.trim();
+        record.area = areaTextInput.value.trim();
+        record.section = sectionTextInput.value.trim();
+      }
+
+      if(wasEditing){
+        await apiUpdate(editingId, record);
+        endEdit();
+      }else{
+        const res = await apiAdd(record);
+        if(res && res.id){ myIds.push(res.id); saveMyIds(myIds); }
+        resetForm();
+      }
+      await refresh();
+    }catch(e){
+      formMsg.textContent = '保存に失敗しました。API_URLの設定をご確認ください。';
+    }finally{
+      addBtn.disabled = false;
+      addBtn.textContent = editingId ? '更新する' : 'チケットを追加';
+    }
+  }
+
+  async function handleDelete(id){
+    try{
+      await apiDelete(id);
+      myIds = myIds.filter(i => i !== id);
+      saveMyIds(myIds);
+      await refresh();
+    }catch(e){
+      formMsg.textContent = '削除に失敗しました。もう一度お試しください。';
+    }
+  }
+
+  addBtn.addEventListener('click', handleAdd);
+
+  function init(){
+    setMode('HOME');
+    if(!API_URL || API_URL.indexOf('PASTE_') !== -1){
+      document.getElementById('setupBanner').style.display = 'block';
+    }
+    refresh();
+    setInterval(refresh, 8000);
+  }
+  init();
+})();
+</script>
+</body>
+</html>

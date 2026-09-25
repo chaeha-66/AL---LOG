@@ -328,7 +328,7 @@
         photoDropHint.textContent = 'タップしてカメラロールから選択';
       }
     }catch(e){
-      formMsg.textContent = '写真の読み込みに失敗しました';
+      formMsg.textContent = '写真の処理に失敗しました: ' + (e && e.message ? e.message : String(e));
       photoDropHint.textContent = 'タップしてカメラロールから選択';
     }
   });

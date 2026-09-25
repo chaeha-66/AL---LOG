@@ -120,8 +120,9 @@
   .submit-btn:disabled{ opacity:0.55; }
   .form-msg{ text-align:center; font-size:12.5px; color:#c8283b; min-height:16px; margin-top:8px; }
 
-  .board{ column-width:270px; column-gap:22px; }
-  .card{ break-inside:avoid; margin:0 0 24px; background:var(--ticket-paper); border-radius:12px; overflow:hidden; box-shadow:0 10px 20px rgba(0,0,0,0.3); position:relative; padding:16px 18px 18px; }
+  .board{ display:flex; flex-wrap:wrap; gap:22px; }
+  .board .card{ flex:1 1 270px; max-width:340px; }
+  .card{ background:var(--ticket-paper); border-radius:12px; overflow:hidden; box-shadow:0 10px 20px rgba(0,0,0,0.3); position:relative; padding:16px 18px 18px; }
   .card-top{ background:linear-gradient(160deg,var(--pink-1),var(--pink-2)); margin:-16px -18px 14px; padding:16px 18px 14px; }
   .edit-btn, .remove-btn{
     position:absolute; top:10px; background:rgba(0,0,0,0.12); border:none; font-size:13px; color:var(--ink);

@@ -225,12 +225,23 @@
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id }) });
     return res.json();
   }
-  async function apiUploadPhoto(filename, base64Data){
-    const res = await fetch(API_URL, {
-      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'uploadPhoto', filename, dataBase64: base64Data })
+  function apiUploadPhoto(filename, base64Data){
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', API_URL, true);
+      xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+      xhr.timeout = 30000;
+      xhr.onload = () => {
+        try{
+          resolve(JSON.parse(xhr.responseText));
+        }catch(e){
+          reject(new Error('サーバーからの応答を解析できませんでした(status:' + xhr.status + ')'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('通信エラーが発生しました'));
+      xhr.ontimeout = () => reject(new Error('通信がタイムアウトしました'));
+      xhr.send(JSON.stringify({ action:'uploadPhoto', filename, dataBase64: base64Data }));
     });
-    return res.json();
   }
   function lsGet(key, fallback){ try{ return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }catch(e){ return fallback; } }
   function lsSet(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
@@ -284,7 +295,7 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const maxDim = 1200;
+          const maxDim = 900;
           let w = img.width, h = img.height;
           if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
           else if(h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
@@ -293,7 +304,7 @@
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           let quality = 0.8;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
-          while(dataUrl.length > 2600000 && quality > 0.3){
+          while(dataUrl.length > 1200000 && quality > 0.3){
             quality -= 0.1;
             dataUrl = canvas.toDataURL('image/jpeg', quality);
           }

@@ -322,24 +322,38 @@
     const file = photoFileInput.files[0];
     if(!file) return;
     formMsg.textContent = '';
-    photoDropHint.textContent = 'アップロード中...';
+    photoDropHint.textContent = '圧縮中...';
     try{
       const dataUrl = await compressImageToBase64(file);
       photoUrlPreview.src = dataUrl;
       photoUrlPreview.style.display = 'block';
 
       const base64Only = dataUrl.split(',')[1];
+      const approxBytes = Math.round(base64Only.length * 0.75);
+      const SIZE_LIMIT_BYTES = 3 * 1024 * 1024; // 3MB(圧縮後の上限の目安)
+
+      if(approxBytes > SIZE_LIMIT_BYTES){
+        formMsg.textContent = 'ファイルサイズが大きすぎます(約' + (approxBytes/1024/1024).toFixed(1) + 'MB)。別の写真を選ぶか、スクリーンショットで縮小してから試してください。';
+        photoDropHint.textContent = 'タップしてカメラロールから選択';
+        return;
+      }
+
+      photoDropHint.textContent = 'アップロード中...(約' + (approxBytes/1024/1024).toFixed(1) + 'MB)';
       const filename = Date.now() + '_' + Math.random().toString(36).slice(2,8) + '.jpg';
       const res = await apiUploadPhoto(filename, base64Only);
       if(res && res.url){
         photoUrlInput.value = res.url;
         photoDropHint.textContent = 'アップロード完了';
       }else{
-        formMsg.textContent = '写真のアップロードに失敗しました(' + (res && res.error ? res.error : '不明なエラー') + ')';
+        const errText = res && res.error ? res.error : '不明なエラー';
+        const looksLikeSizeIssue = /large|size|413|payload/i.test(errText);
+        formMsg.textContent = (looksLikeSizeIssue ? 'ファイルサイズが原因の可能性があります: ' : '写真のアップロードに失敗しました: ') + errText;
         photoDropHint.textContent = 'タップしてカメラロールから選択';
       }
     }catch(e){
-      formMsg.textContent = '写真の処理に失敗しました: ' + (e && e.message ? e.message : String(e));
+      const msg = (e && e.message) ? e.message : String(e);
+      const looksLikeSizeIssue = /large|size|payload|memory/i.test(msg);
+      formMsg.textContent = (looksLikeSizeIssue ? 'ファイルサイズが原因の可能性があります: ' : '写真の処理に失敗しました: ') + msg;
       photoDropHint.textContent = 'タップしてカメラロールから選択';
     }
   });

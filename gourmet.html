@@ -225,22 +225,65 @@
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id }) });
     return res.json();
   }
-  function apiUploadPhoto(filename, base64Data){
+  const GITHUB_OWNER = 'chaeha-66';
+  const GITHUB_REPO = 'AL---LOG';
+  const GITHUB_BRANCH = 'main';
+
+  function uploadPhotoViaForm(filename, base64Data){
     return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', API_URL, true);
-      xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-      xhr.timeout = 30000;
-      xhr.onload = () => {
-        try{
-          resolve(JSON.parse(xhr.responseText));
-        }catch(e){
-          reject(new Error('サーバーからの応答を解析できませんでした(status:' + xhr.status + ')'));
-        }
-      };
-      xhr.onerror = () => reject(new Error('通信エラーが発生しました'));
-      xhr.ontimeout = () => reject(new Error('通信がタイムアウトしました'));
-      xhr.send(JSON.stringify({ action:'uploadPhoto', filename, dataBase64: base64Data }));
+      const iframeName = 'upload_frame_' + Date.now();
+      const iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = API_URL;
+      form.target = iframeName;
+      form.style.display = 'none';
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = JSON.stringify({ action:'uploadPhoto', filename, dataBase64: base64Data });
+      form.appendChild(input);
+      document.body.appendChild(form);
+
+      form.submit();
+
+      // フォーム送信の応答は別オリジンなので直接読めないため、
+      // 生成されるはずのURLに実際に写真が現れるまで確認しにいく
+      const expectedUrl = 'https://raw.githubusercontent.com/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/' + GITHUB_BRANCH + '/photos/' + filename;
+      let attempts = 0;
+      const maxAttempts = 20; // 約2〜3秒間隔 x 20 = 最大1分ほど待つ
+
+      function checkImage(){
+        attempts++;
+        const img = new Image();
+        img.onload = () => {
+          cleanup();
+          resolve({ url: expectedUrl });
+        };
+        img.onerror = () => {
+          if(attempts >= maxAttempts){
+            cleanup();
+            reject(new Error('アップロードの確認がタイムアウトしました。時間をおいて再度お試しください。'));
+          }else{
+            setTimeout(checkImage, 2500);
+          }
+        };
+        img.src = expectedUrl + '?t=' + Date.now();
+      }
+
+      function cleanup(){
+        setTimeout(() => {
+          if(form.parentNode) form.parentNode.removeChild(form);
+          if(iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+      }
+
+      setTimeout(checkImage, 2500);
     });
   }
   function lsGet(key, fallback){ try{ return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; }catch(e){ return fallback; } }
@@ -340,7 +383,7 @@
 
       photoDropHint.textContent = 'アップロード中...(約' + (approxBytes/1024/1024).toFixed(1) + 'MB)';
       const filename = Date.now() + '_' + Math.random().toString(36).slice(2,8) + '.jpg';
-      const res = await apiUploadPhoto(filename, base64Only);
+      const res = await uploadPhotoViaForm(filename, base64Only);
       if(res && res.url){
         photoUrlInput.value = res.url;
         photoDropHint.textContent = 'アップロード完了';

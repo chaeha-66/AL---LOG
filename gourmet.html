@@ -429,7 +429,8 @@
 
     const sorted = source.slice().sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
     const html = sorted.map(g => {
-      const isMine = myIds.indexOf(g.id) !== -1;
+      const myAuthorName = localStorage.getItem(MY_AUTHOR_KEY) || '';
+      const isMine = myIds.indexOf(g.id) !== -1 || (myAuthorName && g.author === myAuthorName);
       const photoHtml = g.photoUrl
         ? '<img class="ig-photo" src="' + escapeHtml(g.photoUrl) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;ig-photo-placeholder&quot;>NO IMAGE</div>\'">'
         : '<div class="ig-photo-placeholder">NO IMAGE</div>';

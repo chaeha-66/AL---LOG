@@ -38,14 +38,9 @@
     display:flex; align-items:center; gap:14px; background:var(--card-bg); border-radius:14px;
     padding:18px 18px; margin-bottom:16px; box-shadow:0 10px 20px rgba(0,0,0,0.25);
     text-decoration:none; color:var(--ink); transition:transform 0.15s ease;
+    border-left:6px solid var(--pink-2);
   }
   .menu-card:hover{ transform:translateY(-2px); }
-  .menu-icon{
-    width:48px; height:48px; border-radius:12px; flex-shrink:0;
-    background:linear-gradient(160deg,var(--pink-1),var(--pink-2));
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; color:var(--ink);
-  }
   .menu-text{ min-width:0; }
   .menu-title{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15.5px; margin-bottom:3px; }
   .menu-desc{ font-size:12px; color:var(--ink-soft); line-height:1.5; }
@@ -62,7 +57,6 @@
     </header>
 
     <a class="menu-card" href="ticket-log.html">
-      <div class="menu-icon">🎟</div>
       <div class="menu-text">
         <div class="menu-title">観戦チケットログ</div>
         <div class="menu-desc">試合日・座席・価格・写真の記録</div>
@@ -71,7 +65,6 @@
     </a>
 
     <a class="menu-card" href="game-schedule.html">
-      <div class="menu-icon">🗓</div>
       <div class="menu-text">
         <div class="menu-title">試合・チケットスケジュール</div>
         <div class="menu-desc">試合日程とチケット発売日の管理</div>
@@ -80,7 +73,6 @@
     </a>
 
     <a class="menu-card" href="gourmet.html">
-      <div class="menu-icon">🍔</div>
       <div class="menu-text">
         <div class="menu-title">アリーナグルメまとめ</div>
         <div class="menu-desc">会場グルメのシェア・口コミ</div>

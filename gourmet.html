@@ -152,6 +152,9 @@
           <label for="nameFieldInput">グルメ名</label>
           <input type="text" id="nameFieldInput" maxlength="40" placeholder="例)アルバルクバーガー">
 
+          <label for="shopNameInput">お店の名前(任意)</label>
+          <input type="text" id="shopNameInput" maxlength="30" placeholder="例)トヨタ食堂">
+
           <label for="venueInput">会場</label>
           <input type="text" id="venueInput" maxlength="30" placeholder="例)TOYOTA ARENA TOKYO">
 
@@ -305,6 +308,7 @@
   });
 
   const nameFieldInput = document.getElementById('nameFieldInput');
+  const shopNameInput = document.getElementById('shopNameInput');
   const venueInput = document.getElementById('venueInput');
   const shopTypeGroup = document.getElementById('shopTypeGroup');
   const availabilityGroup = document.getElementById('availabilityGroup');
@@ -429,8 +433,7 @@
 
     const sorted = source.slice().sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
     const html = sorted.map(g => {
-      const myAuthorName = localStorage.getItem(MY_AUTHOR_KEY) || '';
-      const isMine = myIds.indexOf(g.id) !== -1 || (myAuthorName && g.author === myAuthorName);
+
       const photoHtml = g.photoUrl
         ? '<img class="ig-photo" src="' + escapeHtml(g.photoUrl) + '" alt="" onerror="this.outerHTML=\'<div class=&quot;ig-photo-placeholder&quot;>NO IMAGE</div>\'">'
         : '<div class="ig-photo-placeholder">NO IMAGE</div>';
@@ -438,10 +441,11 @@
       const avatarChar = authorName.charAt(0);
       const shopTag = g.shopType === 'truck' ? '#キッチンカー' : '#店舗';
       const availTag = g.availability === 'limited' ? '#期間限定' : '#常設';
+      const shopNameTag = g.shopName ? '#' + g.shopName.replace(/[\s#]+/g, '') + ' ' : '';
 
       return '<div class="card" id="card-' + g.id + '">'
-        + (isMine ? '<button class="edit-btn" data-id="' + g.id + '" title="編集">編集</button>' : '')
-        + (isMine ? '<button class="remove-btn" data-id="' + g.id + '" title="削除">削除</button>' : '')
+        + '<button class="edit-btn" data-id="' + g.id + '" title="編集">編集</button>'
+        + '<button class="remove-btn" data-id="' + g.id + '" title="削除">削除</button>'
         + '<div class="ig-header">'
         + '<div class="ig-avatar" data-filter-type="author" data-filter-value="' + escapeHtml(authorName) + '">' + escapeHtml(avatarChar) + '</div>'
         + '<div class="ig-header-text">'
@@ -453,14 +457,40 @@
         + '<div class="ig-food-name">' + escapeHtml(g.name || '(名称未設定)') + '</div>'
         + '<div class="ig-stars">' + starDisplay(g.rating || 0) + '</div>'
         + (g.review ? '<div class="ig-review">' + escapeHtml(g.review) + '</div>' : '')
-        + '<div class="ig-hashtags">' + shopTag + ' ' + availTag + '</div>'
+        + '<div class="ig-hashtags">' + escapeHtml(shopNameTag) + shopTag + ' ' + availTag + '</div>'
         + '</div></div>';
     }).join('');
 
     boardArea.innerHTML = bannerHtml + '<div class="board">' + html + '</div>';
 
-    boardArea.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', () => handleDelete(btn.getAttribute('data-id'))));
-    boardArea.querySelectorAll('.edit-btn').forEach(btn => { btn.addEventListener('click', () => { const entry = list.find(x=>x.id===btn.getAttribute('data-id')); if(entry) startEdit(entry); }); });
+    function verifyOwnership(entry){
+      const savedName = localStorage.getItem(MY_AUTHOR_KEY) || '';
+      const postAuthor = entry.author || '';
+      if(postAuthor && savedName && savedName === postAuthor) return true;
+
+      const input = window.prompt('この投稿をしたときの「お名前」を入力してください');
+      if(input === null) return false;
+      const trimmed = input.trim();
+      if(!postAuthor){
+        window.alert('この投稿には名前が設定されていないため、確認できません。');
+        return false;
+      }
+      if(trimmed === postAuthor){
+        lsSet(MY_AUTHOR_KEY, trimmed);
+        return true;
+      }
+      window.alert('名前が一致しませんでした。');
+      return false;
+    }
+
+    boardArea.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', () => {
+      const entry = list.find(x=>x.id===btn.getAttribute('data-id'));
+      if(entry && verifyOwnership(entry)) handleDelete(entry.id);
+    }));
+    boardArea.querySelectorAll('.edit-btn').forEach(btn => { btn.addEventListener('click', () => {
+      const entry = list.find(x=>x.id===btn.getAttribute('data-id'));
+      if(entry && verifyOwnership(entry)) startEdit(entry);
+    }); });
     boardArea.querySelectorAll('[data-filter-type]').forEach(el => {
       el.addEventListener('click', () => {
         filterType = el.getAttribute('data-filter-type');
@@ -496,7 +526,7 @@
   }
 
   function resetForm(){
-    nameFieldInput.value=''; venueInput.value=''; shopType='store'; availability='permanent'; rating=0;
+    nameFieldInput.value=''; shopNameInput.value=''; venueInput.value=''; shopType='store'; availability='permanent'; rating=0;
     setToggle(shopTypeGroup, shopType); setToggle(availabilityGroup, availability); renderStarPicker();
     reviewInput.value=''; photoUrlInput.value=''; photoUrlPreview.style.display='none';
     photoFileInput.value=''; photoDropHint.textContent = 'タップしてカメラロールから選択';
@@ -509,6 +539,7 @@
     foodToggleBtn.classList.add('open');
 
     nameFieldInput.value = entry.name || '';
+    shopNameInput.value = entry.shopName || '';
     venueInput.value = entry.venue || '';
     shopType = entry.shopType || 'store';
     availability = entry.availability || 'permanent';
@@ -541,7 +572,7 @@
       const original = wasEditing ? currentList.find(x => x.id === editingId) : null;
 
       const record = {
-        name, venue: venueInput.value.trim(), shopType, availability, rating,
+        name, shopName: shopNameInput.value.trim(), venue: venueInput.value.trim(), shopType, availability, rating,
         review: reviewInput.value.trim(), author, photoUrl: photoUrlInput.value.trim(),
         timestamp: original ? original.timestamp : Date.now()
       };

@@ -88,6 +88,17 @@
   .tab-btn + .tab-btn{ margin-left:6px; }
   .tab-btn.active{ background:var(--ticket-paper); color:var(--ink); }
   .tab-btn:disabled{ opacity:0.5; }
+  .color-picker{ display:flex; gap:10px; margin-top:8px; align-items:center; flex-wrap:wrap; }
+  .color-swatch{
+    width:32px; height:32px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.12);
+  }
+  .color-swatch.active{ border-color:var(--ink); box-shadow:0 0 0 2px #fff inset; }
+  .color-swatch:focus-visible{ outline:3px solid #f3c1c8; outline-offset:2px; }
+  input[type=color].color-swatch{ -webkit-appearance:none; appearance:none; background:none; overflow:hidden; }
+  input[type=color].color-swatch::-webkit-color-swatch-wrapper{ padding:0; }
+  input[type=color].color-swatch::-webkit-color-swatch{ border:none; border-radius:50%; }
+  .color-custom-label{ font-size:11px; color:var(--ink-soft); }
 
   .edit-banner{
     display:none; max-width:440px; margin:0 auto 10px; background:rgba(0,0,0,0.06); border:1px solid var(--ticket-edge);
@@ -195,6 +206,7 @@
       <div class="tabs">
         <button type="button" class="tab-btn active" id="homeTabBtn">HOME</button>
         <button type="button" class="tab-btn" id="awayTabBtn">AWAY</button>
+        <button type="button" class="tab-btn" id="otherTabBtn">その他</button>
       </div>
 
       <div class="edit-banner" id="editBanner">
@@ -222,6 +234,23 @@
             <select id="opponentInputAway"></select>
             <label for="venueInput">会場</label>
             <input type="text" id="venueInput" maxlength="30" placeholder="例)おきなわアリーナ">
+          </div>
+
+          <div id="otherFields" style="display:none;">
+            <label for="otherTitleInput">試合名</label>
+            <input type="text" id="otherTitleInput" maxlength="40" placeholder="例)天皇杯 / プレシーズンゲーム">
+            <label for="venueInputOther">会場</label>
+            <input type="text" id="venueInputOther" maxlength="30" placeholder="例)越谷市立総合体育館">
+            <label>カレンダーの色</label>
+            <div class="color-picker" id="colorPicker">
+              <button type="button" class="color-swatch active" data-color="#a8d8ea" style="background:#a8d8ea" aria-label="ブルー"></button>
+              <button type="button" class="color-swatch" data-color="#b8d8b0" style="background:#b8d8b0" aria-label="グリーン"></button>
+              <button type="button" class="color-swatch" data-color="#fde7a0" style="background:#fde7a0" aria-label="イエロー"></button>
+              <button type="button" class="color-swatch" data-color="#d5c6f0" style="background:#d5c6f0" aria-label="パープル"></button>
+              <button type="button" class="color-swatch" data-color="#f9c9a0" style="background:#f9c9a0" aria-label="オレンジ"></button>
+              <input type="color" class="color-swatch" id="customColorInput" value="#a8d8ea" aria-label="好きな色を選ぶ">
+              <span class="color-custom-label">← 好きな色</span>
+            </div>
           </div>
 
           <div class="field-row">
@@ -325,16 +354,61 @@
   const awayTabBtn = document.getElementById('awayTabBtn');
   const homeFields = document.getElementById('homeFields');
   const awayFields = document.getElementById('awayFields');
+  const otherTabBtn = document.getElementById('otherTabBtn');
+  const otherFields = document.getElementById('otherFields');
+  const otherTitleInput = document.getElementById('otherTitleInput');
+  const venueInputOther = document.getElementById('venueInputOther');
+  const colorPicker = document.getElementById('colorPicker');
+  const customColorInput = document.getElementById('customColorInput');
+  const DEFAULT_OTHER_COLOR = '#a8d8ea';
+  let otherColor = DEFAULT_OTHER_COLOR;
   let currentMode = 'HOME';
   function setMode(mode){
     currentMode = mode; formMsg.textContent = '';
     homeTabBtn.classList.toggle('active', mode==='HOME');
     awayTabBtn.classList.toggle('active', mode==='AWAY');
+    otherTabBtn.classList.toggle('active', mode==='OTHER');
     homeFields.style.display = mode==='HOME' ? 'block':'none';
     awayFields.style.display = mode==='AWAY' ? 'block':'none';
+    otherFields.style.display = mode==='OTHER' ? 'block':'none';
   }
   homeTabBtn.addEventListener('click', () => setMode('HOME'));
   awayTabBtn.addEventListener('click', () => setMode('AWAY'));
+  otherTabBtn.addEventListener('click', () => setMode('OTHER'));
+
+  function setOtherColor(color){
+    otherColor = color || DEFAULT_OTHER_COLOR;
+    let matched = false;
+    colorPicker.querySelectorAll('button.color-swatch').forEach(btn => {
+      const on = btn.getAttribute('data-color').toLowerCase() === otherColor.toLowerCase();
+      btn.classList.toggle('active', on);
+      if(on) matched = true;
+    });
+    customColorInput.classList.toggle('active', !matched);
+    customColorInput.value = otherColor;
+  }
+  colorPicker.querySelectorAll('button.color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => setOtherColor(btn.getAttribute('data-color')));
+  });
+  customColorInput.addEventListener('input', () => setOtherColor(customColorInput.value));
+
+  // カレンダーのマスの色(HOME=ピンク / AWAY=グレー / その他=選んだ色)
+  function cellStyleFor(g){
+    if(!g) return '';
+    if(g.type === 'AWAY') return 'background:linear-gradient(160deg,#ececec,#cfcfcf);';
+    if(g.type === 'OTHER'){
+      const c = g.color || DEFAULT_OTHER_COLOR;
+      const m = /^#([0-9a-f]{6})$/i.exec(c);
+      let text = '';
+      if(m){
+        const n = parseInt(m[1], 16);
+        const lum = (0.299*((n>>16)&255) + 0.587*((n>>8)&255) + 0.114*(n&255)) / 255;
+        if(lum < 0.5) text = 'color:#fff;';
+      }
+      return 'background:' + c + ';' + text;
+    }
+    return 'background:linear-gradient(160deg,#fbe3ea,#f5c6d4);';
+  }
 
   const dateInput = document.getElementById('dateInput');
   const timeInput = document.getElementById('timeInput');
@@ -403,7 +477,7 @@
 
     const html = sorted.map(s => {
       const isMine = myIds.indexOf(s.id) !== -1;
-      const titleText = 'vs ' + (s.opponent || '(未設定)');
+      const titleText = s.type === 'OTHER' ? (s.title || '(未設定)') : 'vs ' + (s.opponent || '(未設定)');
       const reactions = Array.isArray(s.reactions) ? s.reactions : [];
       const myRespId = myReactions[s.id];
 
@@ -508,7 +582,7 @@
       let ticketHtml = hasSale ? '<div class="cal-ticket-icon">🎫</div>' : '';
 
       cellsHtml += '<div class="calendar-cell' + (dimmed?' dimmed':'') + (isToday?' today':'') + ((hasGame||hasSale)?' has-game':'') + '"'
-        + ((hasGame||hasSale) ? ' data-date="'+dateStr+'" tabindex="0" role="button"' : '') + '>'
+        + ((hasGame||hasSale) ? ' data-date="'+dateStr+'" tabindex="0" role="button" style="' + cellStyleFor(games[0] || sales[0]) + '"' : '') + '>'
         + '<span class="cal-daynum">' + displayDay + '</span>' + dotsHtml + ticketHtml + '</div>';
     }
 
@@ -543,6 +617,7 @@
   function resetForm(){
     dateInput.value=''; timeInput.value=''; opponentInput.value=''; opponentInputAway.value='';
     venueInput.value=''; preSaleInput.value=''; generalSaleInput.value=''; noteInput.value='';
+    otherTitleInput.value=''; venueInputOther.value=''; setOtherColor(DEFAULT_OTHER_COLOR);
   }
 
   function startEdit(entry){
@@ -550,8 +625,8 @@
     scheduleFormWrap.style.display = 'block';
     scheduleToggleBtn.textContent = '🔓 Add Schedule ▲';
     scheduleToggleBtn.classList.add('open');
-    setMode(entry.type === 'AWAY' ? 'AWAY' : 'HOME');
-    homeTabBtn.disabled = true; awayTabBtn.disabled = true;
+    setMode(entry.type === 'AWAY' || entry.type === 'OTHER' ? entry.type : 'HOME');
+    homeTabBtn.disabled = true; awayTabBtn.disabled = true; otherTabBtn.disabled = true;
 
     dateInput.value = entry.date || '';
     timeInput.value = entry.time || '';
@@ -559,6 +634,7 @@
     generalSaleInput.value = entry.generalSale || '';
     noteInput.value = entry.note || '';
     if(entry.type === 'AWAY'){ opponentInputAway.value = entry.opponent||''; venueInput.value = entry.venue||''; }
+    else if(entry.type === 'OTHER'){ otherTitleInput.value = entry.title||''; venueInputOther.value = entry.venue||''; setOtherColor(entry.color); }
     else{ opponentInput.value = entry.opponent||''; }
 
     editBanner.style.display = 'flex';
@@ -566,7 +642,7 @@
     document.querySelector('.composer').scrollIntoView({behavior:'smooth', block:'start'});
   }
   function endEdit(){
-    editingId = null; homeTabBtn.disabled=false; awayTabBtn.disabled=false;
+    editingId = null; homeTabBtn.disabled=false; awayTabBtn.disabled=false; otherTabBtn.disabled=false;
     editBanner.style.display='none'; resetForm();
   }
   cancelEditBtn.addEventListener('click', endEdit);
@@ -574,8 +650,13 @@
   async function handleAdd(){
     formMsg.textContent = '';
     if(!dateInput.value){ formMsg.textContent = '試合日を入力してください'; dateInput.focus(); return; }
-    const opponentValue = currentMode === 'HOME' ? opponentInput.value : opponentInputAway.value;
-    if(!opponentValue){ formMsg.textContent = '対戦相手を選択してください'; return; }
+    let opponentValue = '';
+    if(currentMode === 'OTHER'){
+      if(!otherTitleInput.value.trim()){ formMsg.textContent = '試合名を入力してください'; otherTitleInput.focus(); return; }
+    }else{
+      opponentValue = currentMode === 'HOME' ? opponentInput.value : opponentInputAway.value;
+      if(!opponentValue){ formMsg.textContent = '対戦相手を選択してください'; return; }
+    }
 
     const wasEditing = !!editingId;
     addBtn.disabled = true;
@@ -589,7 +670,13 @@
         timestamp: original ? original.timestamp : Date.now(),
         reactions: original ? (original.reactions || []) : []
       };
-      record.venue = currentMode === 'HOME' ? 'TOYOTA ARENA TOKYO' : venueInput.value.trim();
+      if(currentMode === 'HOME'){ record.venue = 'TOYOTA ARENA TOKYO'; }
+      else if(currentMode === 'AWAY'){ record.venue = venueInput.value.trim(); }
+      else{
+        record.title = otherTitleInput.value.trim();
+        record.color = otherColor;
+        record.venue = venueInputOther.value.trim();
+      }
 
       if(wasEditing){
         await apiUpdate(editingId, record);

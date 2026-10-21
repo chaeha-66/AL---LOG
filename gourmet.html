@@ -132,9 +132,41 @@
   .empty-state .big{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; display:block; margin-bottom:8px; }
   .loading{ text-align:center; color:#5a5a5a; padding:40px; font-size:14px; }
   footer{ text-align:center; margin-top:44px; font-size:11.5px; color:#5a5a5a; line-height:1.7; }
+
+  /* ---- パスワード画面 ---- */
+  .auth-overlay{
+    position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; padding:24px;
+    background:linear-gradient(160deg,#EDEDED,#C7C7C7);
+  }
+  .auth-box{
+    background:#FAFAFA; border-radius:14px; box-shadow:0 14px 26px rgba(0,0,0,0.25);
+    padding:28px 24px 24px; width:100%; max-width:340px; text-align:center;
+  }
+  .auth-box h2{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:17px; margin:0 0 6px; color:#2f2f2f; }
+  .auth-box p{ font-size:12px; color:#949494; margin:0 0 18px; }
+  .auth-box input{
+    width:100%; font-size:16px; font-family:'Noto Sans JP', sans-serif; border:none; border-bottom:2px solid #E4E4E4;
+    background:transparent; padding:8px 2px; color:#2f2f2f; text-align:center; border-radius:0;
+  }
+  .auth-box input:focus{ outline:none; border-bottom-color:#4a4a4a; }
+  .auth-box button{
+    display:block; width:100%; margin-top:18px; background:#4a4a4a; color:#fff; border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; padding:12px; border-radius:8px; cursor:pointer;
+  }
+  .auth-box button:disabled{ opacity:0.55; }
+  .auth-msg{ color:#c8283b; font-size:12px; min-height:16px; margin-top:10px; }
 </style>
 </head>
 <body>
+  <div class="auth-overlay" id="authOverlay">
+    <form class="auth-box" id="authForm">
+      <h2>パスワードを入力してください</h2>
+      <p>知り合い限定のページです</p>
+      <input type="password" id="authInput" autocomplete="current-password" placeholder="パスワード">
+      <button type="submit" id="authBtn">入る</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </form>
+  </div>
   <div class="wrap">
     <header>
       <span class="badge">GOURMET</span>
@@ -207,27 +239,84 @@
 <script>
 (function(){
   const API_URL = 'https://script.google.com/macros/s/AKfycbxn9AgM-3P14VCtKDIZTIBDnxL2lmA7Q1On6X2XuEBL1WSuUwyJcoa0FOnKkAdoo4T-eg/exec';
+
+  // ---- パスワード認証(全ページ共通。一度入力すると他のページでも使われます) ----
+  const KEY_STORE = 'alvark_site_pw';
+  const authOverlay = document.getElementById('authOverlay');
+  const authForm = document.getElementById('authForm');
+  const authInput = document.getElementById('authInput');
+  const authBtn = document.getElementById('authBtn');
+  const authMsg = document.getElementById('authMsg');
+  function getKey(){ try{ return localStorage.getItem(KEY_STORE) || ''; }catch(e){ return ''; } }
+  function showAuth(msg){
+    authOverlay.style.display = 'flex';
+    authMsg.textContent = msg || '';
+    setTimeout(() => { try{ authInput.focus(); }catch(e){} }, 50);
+  }
+  function hideAuth(){ authOverlay.style.display = 'none'; }
+  function requireKey(){
+    const k = getKey();
+    if(!k){ showAuth(''); throw new Error('パスワードが未入力です'); }
+    return k;
+  }
+  function checkAuthResult(data){
+    if(data && data.error === 'unauthorized'){
+      try{ localStorage.removeItem(KEY_STORE); }catch(e){}
+      showAuth('パスワードが違います(または変更されました)');
+      throw new Error('unauthorized');
+    }
+    if(data && data.error === 'password_not_configured'){
+      showAuth('サーバー側のパスワードが未設定です(Apps Scriptの APP_PASSWORD を確認してください)');
+      throw new Error('password_not_configured');
+    }
+    return data;
+  }
+  authForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const pw = authInput.value;
+    if(!pw) return;
+    authBtn.disabled = true; authMsg.textContent = '確認中...';
+    try{
+      const res = await fetch(API_URL + '?action=check&key=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if(data && data.ok){
+        try{ localStorage.setItem(KEY_STORE, pw); }catch(e){}
+        authInput.value = ''; authMsg.textContent = '';
+        hideAuth();
+        if(typeof refresh === 'function') refresh();
+      }else if(data && data.error === 'password_not_configured'){
+        authMsg.textContent = 'サーバー側のパスワードが未設定です';
+      }else{
+        authMsg.textContent = 'パスワードが違います';
+      }
+    }catch(e){
+      authMsg.textContent = '通信に失敗しました。もう一度お試しください';
+    }finally{
+      authBtn.disabled = false;
+    }
+  });
+  if(!getKey()) showAuth('');
   const SHEET_NAME = 'gourmet';
   const MY_IDS_KEY = 'gourmetapp_my_ids';
   const MY_AUTHOR_KEY = 'gourmetapp_my_author';
 
   async function apiList(){
-    const res = await fetch(API_URL + '?sheet=' + SHEET_NAME + '&action=list');
-    const data = await res.json();
+    const key = requireKey();
+    const res = await fetch(API_URL + '?sheet=' + SHEET_NAME + '&action=list&key=' + encodeURIComponent(key));
+    const data = checkAuthResult(await res.json());
     return data.items || [];
   }
-  async function apiAdd(record){
-    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'add', data:record }) });
-    return res.json();
+  async function apiPost(payload){
+    const key = requireKey();
+    const res = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ key: key }, payload))
+    });
+    return checkAuthResult(await res.json());
   }
-  async function apiUpdate(id, record){
-    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'update', id, data:record }) });
-    return res.json();
-  }
-  async function apiDelete(id){
-    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ sheet:SHEET_NAME, action:'delete', id }) });
-    return res.json();
-  }
+  async function apiAdd(record){ return apiPost({ sheet:SHEET_NAME, action:'add', data:record }); }
+  async function apiUpdate(id, record){ return apiPost({ sheet:SHEET_NAME, action:'update', id, data:record }); }
+  async function apiDelete(id){ return apiPost({ sheet:SHEET_NAME, action:'delete', id }); }
   const GITHUB_OWNER = 'chaeha-66';
   const GITHUB_REPO = 'AL---LOG';
   const GITHUB_BRANCH = 'main';
@@ -249,7 +338,7 @@
       const input = document.createElement('input');
       input.type = 'hidden';
       input.name = 'payload';
-      input.value = JSON.stringify({ action:'uploadPhoto', filename, dataBase64: base64Data });
+      input.value = JSON.stringify({ action:'uploadPhoto', key: requireKey(), filename, dataBase64: base64Data });
       form.appendChild(input);
       document.body.appendChild(form);
 

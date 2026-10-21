@@ -6,7 +6,7 @@
 <title>ALVARK 観戦ハブ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --court-1:#EDEDED;
@@ -29,8 +29,8 @@
   .wrap{ max-width:480px; margin:0 auto; }
   header{ text-align:center; margin-bottom:36px; }
   header h1{
-    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900;
-    font-size:clamp(26px,6vw,34px); color:var(--ink); margin:0 0 8px;
+    font-family:'Anton', sans-serif; font-weight:400; letter-spacing:0.02em;
+    font-size:clamp(30px,8vw,42px); color:var(--ink); margin:0 0 8px;
   }
   header p{ color:#5a5a5a; font-size:13px; margin:0; }
 
@@ -38,56 +38,151 @@
     display:flex; align-items:center; gap:14px; background:var(--card-bg); border-radius:14px;
     padding:18px 18px; margin-bottom:16px; box-shadow:0 10px 20px rgba(0,0,0,0.25);
     text-decoration:none; color:var(--ink); transition:transform 0.15s ease;
+    border-left:6px solid var(--pink-2);
   }
   .menu-card:hover{ transform:translateY(-2px); }
-  .menu-icon{
-    width:48px; height:48px; border-radius:12px; flex-shrink:0;
-    background:linear-gradient(160deg,var(--pink-1),var(--pink-2));
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:20px; color:var(--ink);
-  }
   .menu-text{ min-width:0; }
   .menu-title{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15.5px; margin-bottom:3px; }
   .menu-desc{ font-size:12px; color:var(--ink-soft); line-height:1.5; }
   .menu-arrow{ margin-left:auto; color:var(--ink-soft); font-size:18px; flex-shrink:0; }
 
   footer{ text-align:center; margin-top:36px; font-size:11.5px; color:#5a5a5a; line-height:1.7; }
+
+  /* ---- パスワード画面 ---- */
+  .auth-overlay{
+    position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; padding:24px;
+    background:linear-gradient(160deg,#EDEDED,#C7C7C7);
+  }
+  .auth-box{
+    background:#FAFAFA; border-radius:14px; box-shadow:0 14px 26px rgba(0,0,0,0.25);
+    padding:28px 24px 24px; width:100%; max-width:340px; text-align:center;
+  }
+  .auth-box h2{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:17px; margin:0 0 6px; color:#2f2f2f; }
+  .auth-box p{ font-size:12px; color:#949494; margin:0 0 18px; }
+  .auth-box input{
+    width:100%; font-size:16px; font-family:'Noto Sans JP', sans-serif; border:none; border-bottom:2px solid #E4E4E4;
+    background:transparent; padding:8px 2px; color:#2f2f2f; text-align:center; border-radius:0;
+  }
+  .auth-box input:focus{ outline:none; border-bottom-color:#4a4a4a; }
+  .auth-box button{
+    display:block; width:100%; margin-top:18px; background:#4a4a4a; color:#fff; border:none;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; padding:12px; border-radius:8px; cursor:pointer;
+  }
+  .auth-box button:disabled{ opacity:0.55; }
+  .auth-msg{ color:#c8283b; font-size:12px; min-height:16px; margin-top:10px; }
 </style>
 </head>
 <body>
+  <div class="auth-overlay" id="authOverlay">
+    <form class="auth-box" id="authForm">
+      <h2>パスワードを入力してください</h2>
+      <p>知り合い限定のページです</p>
+      <input type="password" id="authInput" autocomplete="current-password" placeholder="パスワード">
+      <button type="submit" id="authBtn">入る</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </form>
+  </div>
   <div class="wrap">
     <header>
-      <h1>ALVARK 観戦ハブ</h1>
+      <h1>ALVARKERS Watching Share</h1>
       <p>使いたいアプリを選んでください</p>
     </header>
 
     <a class="menu-card" href="ticket-log.html">
-      <div class="menu-icon">🎟</div>
       <div class="menu-text">
-        <div class="menu-title">観戦ログ</div>
-        <div class="menu-desc">試合日・座席などの記録</div>
+        <div class="menu-title">観戦チケットログ</div>
+        <div class="menu-desc">試合日・座席・価格・写真の記録</div>
       </div>
       <div class="menu-arrow">›</div>
     </a>
 
     <a class="menu-card" href="game-schedule.html">
-      <div class="menu-icon">🗓</div>
       <div class="menu-text">
-        <div class="menu-title">スケジュール</div>
+        <div class="menu-title">試合・チケットスケジュール</div>
         <div class="menu-desc">試合日程とチケット発売日の管理</div>
       </div>
       <div class="menu-arrow">›</div>
     </a>
 
     <a class="menu-card" href="gourmet.html">
-      <div class="menu-icon">🍔</div>
       <div class="menu-text">
-        <div class="menu-title">アリーナグルメ</div>
-        <div class="menu-desc">会場グルメのシェア</div>
+        <div class="menu-title">アリーナグルメまとめ</div>
+        <div class="menu-desc">会場グルメのシェア・口コミ</div>
       </div>
       <div class="menu-arrow">›</div>
     </a>
 
   </div>
+
+<script>
+(function(){
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxn9AgM-3P14VCtKDIZTIBDnxL2lmA7Q1On6X2XuEBL1WSuUwyJcoa0FOnKkAdoo4T-eg/exec';
+
+  // ---- パスワード認証(全ページ共通。一度入力すると他のページでも使われます) ----
+  const KEY_STORE = 'alvark_site_pw';
+  const authOverlay = document.getElementById('authOverlay');
+  const authForm = document.getElementById('authForm');
+  const authInput = document.getElementById('authInput');
+  const authBtn = document.getElementById('authBtn');
+  const authMsg = document.getElementById('authMsg');
+  function getKey(){ try{ return localStorage.getItem(KEY_STORE) || ''; }catch(e){ return ''; } }
+  function showAuth(msg){
+    authOverlay.style.display = 'flex';
+    authMsg.textContent = msg || '';
+    setTimeout(() => { try{ authInput.focus(); }catch(e){} }, 50);
+  }
+  function hideAuth(){ authOverlay.style.display = 'none'; }
+  function requireKey(){
+    const k = getKey();
+    if(!k){ showAuth(''); throw new Error('パスワードが未入力です'); }
+    return k;
+  }
+  function checkAuthResult(data){
+    if(data && data.error === 'unauthorized'){
+      try{ localStorage.removeItem(KEY_STORE); }catch(e){}
+      showAuth('パスワードが違います(または変更されました)');
+      throw new Error('unauthorized');
+    }
+    if(data && data.error === 'password_not_configured'){
+      showAuth('サーバー側のパスワードが未設定です(Apps Scriptの APP_PASSWORD を確認してください)');
+      throw new Error('password_not_configured');
+    }
+    return data;
+  }
+  authForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const pw = authInput.value;
+    if(!pw) return;
+    authBtn.disabled = true; authMsg.textContent = '確認中...';
+    try{
+      const res = await fetch(API_URL + '?action=check&key=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if(data && data.ok){
+        try{ localStorage.setItem(KEY_STORE, pw); }catch(e){}
+        authInput.value = ''; authMsg.textContent = '';
+        hideAuth();
+        if(typeof refresh === 'function') refresh();
+      }else if(data && data.error === 'password_not_configured'){
+        authMsg.textContent = 'サーバー側のパスワードが未設定です';
+      }else{
+        authMsg.textContent = 'パスワードが違います';
+      }
+    }catch(e){
+      authMsg.textContent = '通信に失敗しました。もう一度お試しください';
+    }finally{
+      authBtn.disabled = false;
+    }
+  });
+  if(!getKey()) showAuth('');
+
+  // 保存済みのパスワードがまだ有効か、裏で確認する
+  if(getKey()){
+    fetch(API_URL + '?action=check&key=' + encodeURIComponent(getKey()))
+      .then(r => r.json())
+      .then(d => { try{ checkAuthResult(d); }catch(e){} })
+      .catch(() => {});
+  }
+})();
+</script>
 </body>
 </html>

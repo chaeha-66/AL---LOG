@@ -166,6 +166,7 @@
   .vote-btn.active.plan-no{ background:var(--skip-color); border-color:var(--skip-color); }
   .vote-btn.active.plan-no .vote-label, .vote-btn.active.plan-no .vote-count{ color:#fff; font-weight:700; }
 
+  #boardArea.vote-busy .vote-btn{ opacity:0.5; pointer-events:none; }
   .names-panel{ margin-top:8px; background:rgba(0,0,0,0.03); border-radius:8px; padding:8px 10px; font-size:12px; color:var(--ink); }
   .names-panel .names-title{ font-weight:700; color:var(--ink-soft); font-size:10.5px; margin-bottom:4px; }
 
@@ -372,7 +373,6 @@
   if(!getKey()) showAuth('');
   const SHEET_NAME = 'schedule';
   const MY_IDS_KEY = 'scheduleapp_my_ids';
-  const MY_REACTIONS_KEY = 'scheduleapp_my_reactions';
   const MY_NAME_KEY = 'scheduleapp_my_name';
 
   const TEAMS = [
@@ -418,7 +418,6 @@
   function lsSet(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
   let myIds = lsGet(MY_IDS_KEY, []);
-  let myReactions = lsGet(MY_REACTIONS_KEY, {});
   let myName = localStorage.getItem(MY_NAME_KEY) || '';
 
   const scheduleToggleBtn = document.getElementById('scheduleToggleBtn');
@@ -437,6 +436,8 @@
   viewerNameInput.addEventListener('change', () => {
     myName = viewerNameInput.value.trim();
     localStorage.setItem(MY_NAME_KEY, myName);
+    renderList(currentList);
+    buildCalendar(currentList);
   });
 
   const homeTabBtn = document.getElementById('homeTabBtn');
@@ -525,6 +526,24 @@
     { key:'go', label:'行く' }, { key:'want', label:'行きたい' },
     { key:'think', label:'検討中' }, { key:'no', label:'行かない' }
   ];
+  // 反応は「名前」で1人1つ。同じ名前が複数あっても1つ(新しい方)として数える
+  function normName(n){ return String(n == null ? '' : n).normalize('NFKC').trim().toLowerCase(); }
+  function dedupeReactions(reactions){
+    const byName = new Map();
+    (Array.isArray(reactions) ? reactions : []).forEach(r => {
+      const k = normName(r.name) || ('__' + r.respId);
+      const cur = byName.get(k);
+      if(!cur || (r.timestamp || 0) >= (cur.timestamp || 0)) byName.set(k, r);
+    });
+    return Array.from(byName.values());
+  }
+  function findMine(reactions){
+    const k = normName(viewerNameInput.value);
+    if(!k) return null;
+    return reactions.find(r => normName(r.name) === k) || null;
+  }
+  let voteBusy = false;
+
   function planLabel(plan){
     if(plan==='go') return '行く'; if(plan==='want') return '行きたい';
     if(plan==='think') return '検討中'; return '行かない';
@@ -567,12 +586,12 @@
     const html = sorted.map(s => {
       const isMine = myIds.indexOf(s.id) !== -1;
       const titleText = s.type === 'OTHER' ? (s.title || '(未設定)') : 'vs ' + (s.opponent || '(未設定)');
-      const reactions = Array.isArray(s.reactions) ? s.reactions : [];
-      const myRespId = myReactions[s.id];
+      const reactions = dedupeReactions(s.reactions);
+      const mineReaction = findMine(reactions);
 
       const votesHtml = PLAN_OPTIONS.map(p => {
         const count = reactions.filter(r => r.plan === p.key).length;
-        const mine = myRespId && reactions.find(r => r.respId===myRespId && r.plan===p.key);
+        const mine = !!(mineReaction && mineReaction.plan === p.key);
         return '<button type="button" class="vote-btn ' + (mine?'active '+planKeyClass(p.key):'') + '" data-game-id="' + s.id + '" data-plan="' + p.key + '">'
           + '<span class="vote-label">' + p.label + '</span>'
           + '<span class="vote-count">♥' + count + '</span>'
@@ -663,8 +682,7 @@
       let dotsHtml = '';
       if(hasGame){
         dotsHtml = '<div class="cal-dots">' + games.slice(0,3).map(g => {
-          const respId = myReactions[g.id];
-          const mine = respId ? (g.reactions||[]).find(r=>r.respId===respId) : null;
+          const mine = findMine(dedupeReactions(g.reactions));
           return '<span class="cal-dot" style="background:' + (mine ? 'var(--'+dotClass(mine.plan)+'-color)' : 'var(--none-color)') + '"></span>';
         }).join('') + '</div>';
       }
@@ -793,6 +811,7 @@
   }
 
   async function handleVoteClick(gameId, planKey){
+    if(voteBusy) return;   // 反映待ちの間は押せない(連打で二重に入るのを防ぐ)
     const name = viewerNameInput.value.trim();
     if(!name){
       viewerNameInput.classList.add('name-error');
@@ -802,32 +821,33 @@
     }
     myName = name; localStorage.setItem(MY_NAME_KEY, name);
 
+    voteBusy = true;
+    boardArea.classList.add('vote-busy');
     try{
       const list = await apiList();
       const game = list.find(x => x.id === gameId);
       if(!game) return;
-      if(!Array.isArray(game.reactions)) game.reactions = [];
 
-      const existingRespId = myReactions[gameId];
-      const existing = existingRespId ? game.reactions.find(r => r.respId === existingRespId) : null;
+      const key = normName(name);
+      const all = Array.isArray(game.reactions) ? game.reactions : [];
+      const mineAll = all.filter(r => normName(r.name) === key);
+      const others = all.filter(r => normName(r.name) !== key);
+      const existing = dedupeReactions(mineAll)[0] || null;
 
       if(existing && existing.plan === planKey){
-        game.reactions = game.reactions.filter(r => r.respId !== existingRespId);
-        delete myReactions[gameId];
-        lsSet(MY_REACTIONS_KEY, myReactions);
-      }else if(existing){
-        existing.plan = planKey; existing.name = name; existing.timestamp = Date.now();
+        game.reactions = dedupeReactions(others);   // 同じ項目をもう一度 = 取り消し
       }else{
-        const respId = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-        game.reactions.push({ respId, name, plan: planKey, timestamp: Date.now() });
-        myReactions[gameId] = respId;
-        lsSet(MY_REACTIONS_KEY, myReactions);
+        const respId = existing ? existing.respId : (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+        game.reactions = dedupeReactions(others.concat([{ respId, name, plan: planKey, timestamp: Date.now() }]));
       }
 
       await apiUpdate(gameId, game);
       await refresh();
     }catch(e){
       formMsg.textContent = '保存に失敗しました。もう一度お試しください。';
+    }finally{
+      voteBusy = false;
+      boardArea.classList.remove('vote-busy');
     }
   }
 

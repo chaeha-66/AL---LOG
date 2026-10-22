@@ -150,6 +150,10 @@
   .edit-btn{ right:52px; }
   .remove-btn{ right:10px; }
   .edit-btn:hover, .remove-btn:hover{ background:rgba(0,0,0,0.22); }
+  .card-top.type-away .venue-line, .card-top.type-other .venue-line{ color:#666; }
+  .card-top.dark-bg .opponent{ color:#fff; }
+  .card-top.dark-bg .date-line, .card-top.dark-bg .venue-line{ color:rgba(255,255,255,0.88); }
+  .card-top.dark-bg .edit-btn, .card-top.dark-bg .remove-btn{ background:rgba(255,255,255,0.25); color:#fff; }
   .type-badge{ display:inline-block; font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:10.5px; letter-spacing:0.03em; padding:2px 9px; border-radius:999px; margin-bottom:6px; background:rgba(255,255,255,0.7); color:var(--ink); }
   .opponent{ font-family:'Zen Kaku Gothic New', sans-serif; font-weight:900; font-size:18px; margin:0 0 2px; padding-right:60px; }
   .date-line{ font-size:12.5px; color:#4a4a4a; }
@@ -492,22 +496,25 @@
   });
   customColorInput.addEventListener('input', () => setOtherColor(customColorInput.value));
 
-  // カレンダーのマスの色(HOME=ピンク / AWAY=グレー / その他=選んだ色)
-  function cellStyleFor(g){
-    if(!g) return '';
-    if(g.type === 'AWAY') return 'background:linear-gradient(160deg,#ececec,#cfcfcf);';
+  // 試合の種類ごとの色(HOME=ピンク / AWAY=グレー / その他=選んだ色)。カレンダーとカードで共通
+  function isDarkColor(c){
+    const m = /^#([0-9a-f]{6})$/i.exec(c || '');
+    if(!m) return false;
+    const n = parseInt(m[1], 16);
+    return (0.299*((n>>16)&255) + 0.587*((n>>8)&255) + 0.114*(n&255)) / 255 < 0.5;
+  }
+  function typeColors(g){
+    if(g.type === 'AWAY') return { bg:'linear-gradient(160deg,#ececec,#cfcfcf)', dark:false, cls:'type-away' };
     if(g.type === 'OTHER'){
       const c = g.color || DEFAULT_OTHER_COLOR;
-      const m = /^#([0-9a-f]{6})$/i.exec(c);
-      let text = '';
-      if(m){
-        const n = parseInt(m[1], 16);
-        const lum = (0.299*((n>>16)&255) + 0.587*((n>>8)&255) + 0.114*(n&255)) / 255;
-        if(lum < 0.5) text = 'color:#fff;';
-      }
-      return 'background:' + c + ';' + text;
+      return { bg:c, dark:isDarkColor(c), cls:'type-other' };
     }
-    return 'background:linear-gradient(160deg,#fbe3ea,#f5c6d4);';
+    return { bg:'linear-gradient(160deg,#fbe3ea,#f5c6d4)', dark:false, cls:'type-home' };
+  }
+  function cellStyleFor(g){
+    if(!g) return '';
+    const t = typeColors(g);
+    return 'background:' + t.bg + ';' + (t.dark ? 'color:#fff;' : '');
   }
 
   const dateInput = document.getElementById('dateInput');
@@ -618,6 +625,7 @@
 
     const html = sorted.map(s => {
       const isMine = myIds.indexOf(s.id) !== -1;
+      const tc = typeColors(s);
       const titleText = s.type === 'OTHER' ? (s.title || '(未設定)') : 'vs ' + (s.opponent || '(未設定)');
       const reactions = dedupeReactions(s.reactions);
       const mineReaction = findMine(reactions);
@@ -641,7 +649,7 @@
       }
 
       return '<div class="card" id="card-' + s.id + '">'
-        + '<div class="card-top">'
+        + '<div class="card-top ' + tc.cls + (tc.dark ? ' dark-bg' : '') + '" style="background:' + tc.bg + ';">'
         + (isMine ? '<button class="edit-btn" data-id="' + s.id + '" title="編集">編集</button>' : '')
         + (isMine ? '<button class="remove-btn" data-id="' + s.id + '" title="削除">削除</button>' : '')
         + '<div class="opponent">' + escapeHtml(titleText) + '</div>'

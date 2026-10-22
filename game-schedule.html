@@ -78,6 +78,14 @@
     border-radius:999px; padding:10px 0; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.12);
     font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:15px; color:var(--ink);
   }
+  .past-toggle-btn{
+    display:block; width:100%; max-width:440px; margin:0 auto 24px; background:transparent;
+    border:1.5px solid rgba(0,0,0,0.28); border-radius:999px; padding:8px 0; cursor:pointer;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13px; color:var(--ink);
+  }
+  .past-toggle-btn:hover{ background:rgba(0,0,0,0.05); }
+  .past-toggle-btn.on{ background:rgba(0,0,0,0.1); }
+  .past-toggle-btn:focus-visible{ outline:3px solid #f3c1c8; outline-offset:2px; }
   .composer-toggle-btn.open{ background:var(--accent); color:#fff; border-color:var(--accent); }
 
   .tabs{ display:flex; max-width:440px; margin:0 auto 10px; gap:0; }
@@ -305,6 +313,8 @@
         </div>
       </div>
     </div>
+
+    <button type="button" class="past-toggle-btn" id="pastToggleBtn" aria-pressed="false" style="display:none;"></button>
 
     <div id="boardArea"><div class="loading">読み込み中...</div></div>
 
@@ -572,12 +582,35 @@
     return (d.getMonth()+1)+'/'+d.getDate();
   }
 
+  // 開催済み(試合日が今日より前)の試合は、ボタンを押したときだけ表示する
+  let showPast = false;
+  const pastToggleBtn = document.getElementById('pastToggleBtn');
+  function todayStr(){
+    const n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+  }
+  function isPast(g){ return !!g.date && g.date < todayStr(); }
+  function updatePastToggle(list){
+    const n = list.filter(isPast).length;
+    pastToggleBtn.style.display = n ? 'block' : 'none';
+    pastToggleBtn.textContent = showPast ? '開催済みの試合を隠す' : '開催済みの試合を表示(' + n + '件)';
+    pastToggleBtn.classList.toggle('on', showPast);
+    pastToggleBtn.setAttribute('aria-pressed', showPast ? 'true' : 'false');
+  }
+  pastToggleBtn.addEventListener('click', () => { showPast = !showPast; renderList(currentList); });
+
   function renderList(list){
+    updatePastToggle(list);
     if(list.length === 0){
       boardArea.innerHTML = '<div class="empty-state"><span class="big">まだスケジュールがありません</span>気になる試合を追加してみましょう</div>';
       return;
     }
-    const sorted = list.slice().sort((a,b) => {
+    const source = showPast ? list : list.filter(g => !isPast(g));
+    if(source.length === 0){
+      boardArea.innerHTML = '<div class="empty-state"><span class="big">これからの試合はありません</span>開催済みの試合は、上のボタンで表示できます</div>';
+      return;
+    }
+    const sorted = source.slice().sort((a,b) => {
       const da=a.date||''; const db=b.date||'';
       if(da!==db) return da.localeCompare(db);
       return (a.timestamp||0)-(b.timestamp||0);
@@ -699,7 +732,11 @@
         const dateStr = cell.getAttribute('data-date');
         const target = (gamesByDate[dateStr]||[])[0] || (salesByDate[dateStr]||[])[0];
         if(!target) return;
-        const el = document.getElementById('card-'+target.id);
+        let el = document.getElementById('card-'+target.id);
+        if(!el && isPast(target) && !showPast){
+          showPast = true; renderList(currentList);
+          el = document.getElementById('card-'+target.id);
+        }
         if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); }
       };
       cell.addEventListener('click', jump);

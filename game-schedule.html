@@ -12,7 +12,7 @@
     --court-1:#EDEDED; --court-2:#C7C7C7; --ink:#2f2f2f; --ink-soft:#949494;
     --ticket-paper:#FAFAFA; --ticket-edge:#E4E4E4; --accent:#4a4a4a;
     --pink-1:#fbe3ea; --pink-2:#f5c6d4;
-    --go-color:#f28b82; --want-color:#f4a6c6; --think-color:#a8d8ea; --skip-color:#b8b8b8; --none-color:#d6d6d6;
+    --go-color:#f28b82; --want-color:#f4a6c6; --think-color:#a8d8ea; --skip-color:#b8b8b8; --no-color:#b8b8b8; --none-color:#d6d6d6;
   }
   *{box-sizing:border-box;}
   body{
@@ -722,10 +722,13 @@
 
       let dotsHtml = '';
       if(hasGame){
-        dotsHtml = '<div class="cal-dots">' + games.slice(0,3).map(g => {
+        // 自分が「行かない」にした試合には丸ポチを付けない
+        const dots = games.slice(0,3).map(g => {
           const mine = findMine(dedupeReactions(g.reactions));
+          if(mine && mine.plan === 'no') return '';
           return '<span class="cal-dot" style="background:' + (mine ? 'var(--'+dotClass(mine.plan)+'-color)' : 'var(--none-color)') + '"></span>';
-        }).join('') + '</div>';
+        }).join('');
+        dotsHtml = dots ? '<div class="cal-dots">' + dots + '</div>' : '';
       }
       let ticketHtml = hasSale ? '<div class="cal-ticket-icon">🎫</div>' : '';
 
